@@ -1,81 +1,33 @@
 /**
  * @terrarium/contracts
  *
- * Core domain contracts, lifecycle status unions, interfaces, and base types.
+ * Core domain contracts, schemas, lifecycle status unions, interfaces, and base types.
  * Pure TypeScript: zero runtime dependencies, UI-independent, provider-independent.
  */
 
-export const CONTRACTS_PACKAGE_NAME = "@terrarium/contracts" as const;
-export const CONTRACTS_VERSION = "0.1.0" as const;
+// Base entities & result primitives
+export * from "./base.ts";
 
-/**
- * Standard workspace package information.
- */
-export interface TerrariumPackageInfo {
-  readonly name: string;
-  readonly version: string;
-  readonly role: string;
-}
+// Error hierarchy & validation issue models
+export * from "./errors.ts";
 
-/**
- * Base persisted entity attributes.
- */
-export interface BaseEntity {
-  readonly id: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
+// Lightweight schema validation helpers
+export * from "./validation-helpers.ts";
 
-/**
- * Standard execution lifecycle status.
- */
-export type ExecutionStatus =
-  | "idle"
-  | "queued"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "blocked";
+// Domain models
+export * from "./departments.ts";
+export * from "./agent.ts";
+export * from "./tasks.ts";
+export * from "./execution.ts";
+export * from "./session.ts";
+export * from "./artifacts.ts";
+export * from "./approvals.ts";
+export * from "./events.ts";
+export * from "./reports.ts";
+export * from "./memory.ts";
+export * from "./providers.ts";
+export * from "./budget.ts";
+export * from "./results.ts";
 
-/**
- * High-level task status.
- */
-export type TaskStatus =
-  | "draft"
-  | "intake"
-  | "planning"
-  | "active"
-  | "paused"
-  | "completed"
-  | "failed"
-  | "cancelled";
-
-/**
- * Agent role categorization across departments.
- */
-export type AgentDepartment =
-  | "executive"
-  | "engineering"
-  | "product"
-  | "design"
-  | "customer_intelligence"
-  | "security"
-  | "research"
-  | "documentation"
-  | "legal";
-
-/**
- * Strongly typed Result type for predictable domain boundary operations.
- */
-export type Result<T, E = Error> =
-  | { readonly success: true; readonly data: T }
-  | { readonly success: false; readonly error: E };
-
-export function ok<T>(data: T): Result<T, never> {
-  return { success: true, data };
-}
-
-export function fail<E = Error>(error: E): Result<never, E> {
-  return { success: false, error };
-}
+// UI presentation and user-facing terminology
+export * from "./ui.ts";
