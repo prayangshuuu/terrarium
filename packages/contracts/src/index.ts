@@ -28,6 +28,7 @@ export * from "./memory.ts";
 export * from "./providers.ts";
 export * from "./budget.ts";
 export * from "./results.ts";
+export * from "./repositories.ts";
 
 // UI presentation and user-facing terminology
 export * from "./ui.ts";

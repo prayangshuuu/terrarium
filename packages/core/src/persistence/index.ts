@@ -1,0 +1,20 @@
+/**
+ * @terrarium/core - persistence/index.ts
+ *
+ * Persistence layer exports: SQLite connection, migrations, and repositories.
+ */
+
+export * from "./db.ts";
+export * from "./migrations/migration-runner.ts";
+export * from "./migrations/001_initial_schema.ts";
+export * from "./repositories/base-sqlite-repository.ts";
+export * from "./repositories/sqlite-task-repository.ts";
+export * from "./repositories/sqlite-step-repository.ts";
+export * from "./repositories/sqlite-execution-repository.ts";
+export * from "./repositories/sqlite-session-repository.ts";
+export * from "./repositories/sqlite-artifact-repository.ts";
+export * from "./repositories/sqlite-approval-repository.ts";
+export * from "./repositories/sqlite-event-repository.ts";
+export * from "./repositories/sqlite-report-repository.ts";
+export * from "./repositories/sqlite-memory-repository.ts";
+export * from "./sqlite-database.ts";

@@ -13,6 +13,11 @@ export type TerrariumErrorCode =
   | "BUDGET_EXCEEDED"
   | "PROVIDER_ERROR"
   | "DELEGATION_LIMIT_EXCEEDED"
+  | "DATABASE_ERROR"
+  | "DUPLICATE_ENTITY"
+  | "FOREIGN_KEY_VIOLATION"
+  | "DATABASE_UNAVAILABLE"
+  | "MIGRATION_MISMATCH"
   | "CANCELLED"
   | "TIMEOUT"
   | "INTERNAL_ERROR";
@@ -198,3 +203,100 @@ export class ProviderError extends TerrariumError {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+/**
+ * Base database and persistence operation error.
+ */
+export class DatabaseError extends TerrariumError {
+  constructor(message: string, code: TerrariumErrorCode = "DATABASE_ERROR", details?: Record<string, unknown>) {
+    super(message, code, details);
+    this.name = "DatabaseError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when attempting to insert an entity with an ID or unique key that already exists.
+ */
+export class DuplicateEntityError extends DatabaseError {
+  readonly entityType: string;
+  readonly entityId: string;
+
+  constructor(entityType: string, entityId: string) {
+    super(
+      `Cannot create ${entityType}: an entity with ID '${entityId}' already exists`,
+      "DUPLICATE_ENTITY",
+      { entityType, entityId }
+    );
+    this.name = "DuplicateEntityError";
+    this.entityType = entityType;
+    this.entityId = entityId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when a foreign key relationship constraint is violated.
+ */
+export class ForeignKeyConstraintError extends DatabaseError {
+  readonly entityType: string;
+  readonly foreignKey: string;
+  readonly targetId: string;
+
+  constructor(entityType: string, foreignKey: string, targetId: string) {
+    super(
+      `Foreign key constraint failed on ${entityType} for ${foreignKey}='${targetId}'`,
+      "FOREIGN_KEY_VIOLATION",
+      { entityType, foreignKey, targetId }
+    );
+    this.name = "ForeignKeyConstraintError";
+    this.entityType = entityType;
+    this.foreignKey = foreignKey;
+    this.targetId = targetId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when the database is locked, unavailable, or cannot be accessed on the filesystem.
+ */
+export class DatabaseUnavailableError extends DatabaseError {
+  readonly path: string;
+  readonly reason: string;
+
+  constructor(path: string, reason: string) {
+    super(
+      `Database at '${path}' is unavailable: ${reason}`,
+      "DATABASE_UNAVAILABLE",
+      { path, reason }
+    );
+    this.name = "DatabaseUnavailableError";
+    this.path = path;
+    this.reason = reason;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when the applied database schema does not match current migration definitions.
+ */
+export class MigrationMismatchError extends DatabaseError {
+  readonly expectedVersion: number;
+  readonly actualVersion: number;
+  readonly migrationName?: string;
+
+  constructor(expectedVersion: number, actualVersion: number, migrationName?: string) {
+    super(
+      `Database migration mismatch: expected version ${expectedVersion}, but database is at version ${actualVersion}` +
+        (migrationName ? ` (at migration '${migrationName}')` : ""),
+      "MIGRATION_MISMATCH",
+      { expectedVersion, actualVersion, migrationName }
+    );
+    this.name = "MigrationMismatchError";
+    this.expectedVersion = expectedVersion;
+    this.actualVersion = actualVersion;
+    this.migrationName = migrationName;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+

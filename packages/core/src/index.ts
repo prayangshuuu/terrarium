@@ -17,9 +17,12 @@ import {
   type TerrariumConfig,
   getDefaultConfig,
 } from "@terrarium/config";
+import { createSqliteDatabase, SqliteDatabase } from "./persistence/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
+
+export * from "./persistence/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -29,23 +32,36 @@ export interface CoreEngineState {
 
 export interface CoreEngine {
   readonly config: TerrariumConfig;
+  readonly db?: SqliteDatabase;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
+}
+
+export interface CreateCoreEngineOptions {
+  readonly config?: TerrariumConfig;
+  readonly enableDatabase?: boolean;
 }
 
 /**
  * Creates and initializes the core orchestration engine.
  */
 export function createCoreEngine(
-  config: TerrariumConfig = getDefaultConfig()
+  optionsOrConfig: TerrariumConfig | CreateCoreEngineOptions = getDefaultConfig()
 ): CoreEngine {
+  const isDirectConfig = "appName" in optionsOrConfig && "paths" in optionsOrConfig;
+  const config = isDirectConfig ? (optionsOrConfig as TerrariumConfig) : (optionsOrConfig.config ?? getDefaultConfig());
+  const enableDb = isDirectConfig ? false : (optionsOrConfig.enableDatabase ?? false);
+
   let status: ExecutionStatus = "idle";
   const initializedAt = new Date().toISOString();
   let activeExecutions = 0;
 
+  const db = enableDb ? createSqliteDatabase(config.paths.dbPath) : undefined;
+
   return {
     config,
+    db,
     getState(): CoreEngineState {
       return {
         status,
@@ -66,6 +82,9 @@ export function createCoreEngine(
       }
       status = "cancelled";
       activeExecutions = 0;
+      if (db) {
+        db.close();
+      }
       return ok(undefined);
     },
   };
