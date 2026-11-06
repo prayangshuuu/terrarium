@@ -1,0 +1,23 @@
+{
+  "name": "terrarium",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun test",
+    "cli": "bun run --cwd apps/cli start",
+    "dev": "bun run --cwd apps/cli dev",
+    "build": "bun run --filter '*' build"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "bun": ">=1.3.14"
+  }
+}

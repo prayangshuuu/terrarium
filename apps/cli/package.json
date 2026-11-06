@@ -1,0 +1,27 @@
+{
+  "name": "terrarium-cli",
+  "module": "src/index.tsx",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.tsx",
+    "dev": "bun run --watch src/index.tsx",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.8.1",
+    "@opentui/react": "^0.8.1",
+    "@terrarium/config": "workspace:*",
+    "@terrarium/contracts": "workspace:*",
+    "@terrarium/core": "workspace:*",
+    "react": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "bun": ">=1.3.14"
+  }
+}

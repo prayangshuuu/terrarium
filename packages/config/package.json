@@ -1,0 +1,27 @@
+{
+  "name": "@terrarium/config",
+  "version": "0.1.0",
+  "description": "Configuration loading, defaults, environment detection, and secret handling for TERRARIUM",
+  "type": "module",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@terrarium/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "^5.9.3"
+  }
+}

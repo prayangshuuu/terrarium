@@ -1,0 +1,24 @@
+{
+  "name": "@terrarium/contracts",
+  "version": "0.1.0",
+  "description": "Shared domain contracts, schemas, lifecycle status unions, and interfaces for TERRARIUM",
+  "type": "module",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "^5.9.3"
+  }
+}
