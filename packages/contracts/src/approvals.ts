@@ -24,18 +24,22 @@ export const APPROVAL_ACTION_TYPES = [
   "package_install",
   "paid_api_call",
   "production_deploy",
+  "external_publish",
+  "message_send",
+  "destructive_operation",
 ] as const;
 
 export type ApprovalActionType = (typeof APPROVAL_ACTION_TYPES)[number];
 
-export const APPROVAL_STATUSES = ["pending", "approved", "rejected", "expired"] as const;
+export const APPROVAL_STATUSES = ["pending", "approved", "rejected", "expired", "cancelled"] as const;
 export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
 
 export const APPROVAL_STATE_TRANSITIONS: Readonly<Record<ApprovalStatus, readonly ApprovalStatus[]>> = {
-  pending: ["approved", "rejected", "expired"],
+  pending: ["approved", "rejected", "expired", "cancelled"],
   approved: [],
   rejected: [],
   expired: [],
+  cancelled: [],
 };
 
 export interface ApprovalRequest extends BaseEntity {
@@ -50,6 +54,11 @@ export interface ApprovalRequest extends BaseEntity {
   readonly requestedAt: string;
   readonly decidedAt?: string;
   readonly expiresAt?: string;
+  readonly toolId?: string;
+  readonly riskLevel?: string;
+  readonly payloadHash?: string;
+  readonly isExecuted?: boolean;
+  readonly executedAt?: string;
   readonly payload?: Readonly<Record<string, unknown>>;
 }
 
@@ -128,6 +137,11 @@ export function validateApprovalRequest(
     requestedAt,
     decidedAt: typeof value.decidedAt === "string" ? value.decidedAt : undefined,
     expiresAt: typeof value.expiresAt === "string" ? value.expiresAt : undefined,
+    toolId: typeof value.toolId === "string" ? value.toolId : undefined,
+    riskLevel: typeof value.riskLevel === "string" ? value.riskLevel : undefined,
+    payloadHash: typeof value.payloadHash === "string" ? value.payloadHash : undefined,
+    isExecuted: typeof value.isExecuted === "boolean" ? value.isExecuted : undefined,
+    executedAt: typeof value.executedAt === "string" ? value.executedAt : undefined,
     payload: value.payload as Record<string, unknown> | undefined,
     createdAt,
     updatedAt,

@@ -16,7 +16,7 @@ import { type Task, type TaskPriority, type TaskStatus, type TaskStep } from "./
 import { type Execution } from "./execution.ts";
 import { type Message, type Session } from "./session.ts";
 import { type Artifact } from "./artifacts.ts";
-import { type ApprovalRequest } from "./approvals.ts";
+import { type ApprovalRequest, type ApprovalStatus } from "./approvals.ts";
 import { type DomainEvent } from "./events.ts";
 import { type Report } from "./reports.ts";
 import { type MemoryCategory, type MemoryItem } from "./memory.ts";
@@ -74,10 +74,20 @@ export interface ArtifactRepository {
   delete(id: string): Promise<Result<boolean, DatabaseError>>;
 }
 
+export interface ApprovalQueryOptions {
+  readonly status?: ApprovalStatus;
+  readonly taskId?: string;
+  readonly toolId?: string;
+  readonly requestedByAgentId?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
 export interface ApprovalRepository {
   findById(id: string): Promise<Result<ApprovalRequest | null, DatabaseError>>;
   listPending(): Promise<Result<readonly ApprovalRequest[], DatabaseError>>;
   listByTaskId(taskId: string): Promise<Result<readonly ApprovalRequest[], DatabaseError>>;
+  list(options?: ApprovalQueryOptions): Promise<Result<readonly ApprovalRequest[], DatabaseError>>;
   create(approval: ApprovalRequest): Promise<Result<ApprovalRequest, DuplicateEntityError | DatabaseError>>;
   update(approval: ApprovalRequest): Promise<Result<ApprovalRequest, NotFoundError | DatabaseError>>;
 }

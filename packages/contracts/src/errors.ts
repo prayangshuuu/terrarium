@@ -29,6 +29,15 @@ export type TerrariumErrorCode =
   | "MIGRATION_MISMATCH"
   | "CANCELLED"
   | "TIMEOUT"
+  | "TOOL_NOT_FOUND"
+  | "TOOL_VALIDATION_ERROR"
+  | "TOOL_EXECUTION_ERROR"
+  | "APPROVAL_REQUIRED"
+  | "APPROVAL_REJECTED"
+  | "APPROVAL_EXPIRED"
+  | "APPROVAL_CANCELLED"
+  | "DUPLICATE_EXECUTION"
+  | "TOOL_TIMEOUT"
   | "INTERNAL_ERROR";
 
 export interface ValidationIssue {
@@ -485,6 +494,162 @@ export class DelegationDepthExceededError extends TerrariumError {
     this.name = "DelegationDepthExceededError";
     this.currentDepth = currentDepth;
     this.maxDepth = maxDepth;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an requested tool is not registered in the ToolRegistry.
+ */
+export class ToolNotFoundError extends NotFoundError {
+  constructor(toolId: string) {
+    super("Tool", toolId);
+    (this as any).code = "TOOL_NOT_FOUND";
+    this.name = "ToolNotFoundError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when tool invocation input or output does not conform to defined schemas.
+ */
+export class ToolValidationError extends DomainValidationError {
+  readonly toolId: string;
+  readonly direction: "input" | "output";
+
+  constructor(toolId: string, direction: "input" | "output", issues: readonly ValidationIssue[]) {
+    super(`Tool '${toolId}' ${direction} validation failed: ${issues.map((i) => i.message).join("; ")}`, issues);
+    (this as any).code = "TOOL_VALIDATION_ERROR";
+    this.name = "ToolValidationError";
+    this.toolId = toolId;
+    this.direction = direction;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when a tool execution encounters a runtime failure.
+ */
+export class ToolExecutionError extends TerrariumError {
+  readonly toolId: string;
+
+  constructor(toolId: string, message: string, details?: Record<string, unknown>) {
+    super(`Tool '${toolId}' execution failed: ${message}`, "TOOL_EXECUTION_ERROR", {
+      toolId,
+      ...details,
+    });
+    this.name = "ToolExecutionError";
+    this.toolId = toolId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when a tool invocation exceeds its configured execution timeout.
+ */
+export class ToolTimeoutError extends TimeoutError {
+  readonly toolId: string;
+
+  constructor(toolId: string, timeoutMs: number) {
+    super(`Tool '${toolId}' exceeded timeout limit of ${timeoutMs}ms`, timeoutMs, `tool:${toolId}`);
+    (this as any).code = "TOOL_TIMEOUT";
+    this.name = "ToolTimeoutError";
+    this.toolId = toolId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when a consequential action requires human approval before proceeding.
+ */
+export class ApprovalRequiredError extends TerrariumError {
+  readonly approvalId: string;
+  readonly toolId: string;
+  readonly actionType: string;
+
+  constructor(approvalId: string, toolId: string, actionType: string, message?: string) {
+    super(
+      message ?? `Action '${actionType}' on tool '${toolId}' requires human approval (Approval ID: ${approvalId})`,
+      "APPROVAL_REQUIRED",
+      { approvalId, toolId, actionType }
+    );
+    this.name = "ApprovalRequiredError";
+    this.approvalId = approvalId;
+    this.toolId = toolId;
+    this.actionType = actionType;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an action attempts to execute on a rejected approval request.
+ * Retries or delegations cannot bypass rejected approvals.
+ */
+export class ApprovalRejectedError extends TerrariumError {
+  readonly approvalId: string;
+  readonly reason?: string;
+
+  constructor(approvalId: string, reason?: string) {
+    super(
+      `Approval '${approvalId}' was rejected${reason ? `: ${reason}` : ""}. Execution blocked.`,
+      "APPROVAL_REJECTED",
+      { approvalId, reason }
+    );
+    this.name = "ApprovalRejectedError";
+    this.approvalId = approvalId;
+    this.reason = reason;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an action attempts to execute on an expired approval request.
+ */
+export class ApprovalExpiredError extends TerrariumError {
+  readonly approvalId: string;
+
+  constructor(approvalId: string) {
+    super(`Approval '${approvalId}' has expired. Execution blocked.`, "APPROVAL_EXPIRED", { approvalId });
+    this.name = "ApprovalExpiredError";
+    this.approvalId = approvalId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an action attempts to execute on a cancelled approval request.
+ */
+export class ApprovalCancelledError extends TerrariumError {
+  readonly approvalId: string;
+  readonly reason?: string;
+
+  constructor(approvalId: string, reason?: string) {
+    super(
+      `Approval '${approvalId}' was cancelled${reason ? `: ${reason}` : ""}. Execution blocked.`,
+      "APPROVAL_CANCELLED",
+      { approvalId, reason }
+    );
+    this.name = "ApprovalCancelledError";
+    this.approvalId = approvalId;
+    this.reason = reason;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an already-executed approval or idempotency key is submitted again (replay attack prevention).
+ */
+export class DuplicateExecutionError extends TerrariumError {
+  readonly actionKey: string;
+
+  constructor(actionKey: string, message?: string) {
+    super(
+      message ?? `Action '${actionKey}' has already been executed. Replay or duplicate execution blocked.`,
+      "DUPLICATE_EXECUTION",
+      { actionKey }
+    );
+    this.name = "DuplicateExecutionError";
+    this.actionKey = actionKey;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }

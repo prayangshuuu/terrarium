@@ -10,6 +10,7 @@ import { type TaskStatus } from "./tasks.ts";
 import { type ExecutionStatus } from "./execution.ts";
 import { type ApprovalStatus } from "./approvals.ts";
 import { type AgentDepartment } from "./departments.ts";
+import { type ToolRiskLevel } from "./tools.ts";
 
 export type TerminalColorName =
   | "default"
@@ -199,6 +200,62 @@ export const APPROVAL_STATUS_UI: Readonly<Record<ApprovalStatus, StatusUIMetadat
     glyph: "⊘",
     color: "gray",
     description: "Decision timed out without action",
+  },
+  cancelled: {
+    label: "Cancelled",
+    shortLabel: "CANC",
+    glyph: "⊖",
+    color: "gray",
+    description: "Revoked or cancelled by user or orchestrator",
+  },
+};
+
+export interface ToolRiskUIMetadata {
+  readonly label: string;
+  readonly shortLabel: string;
+  readonly badge: string;
+  readonly color: "green" | "cyan" | "yellow" | "red" | "magenta";
+  readonly severity: number;
+}
+
+/**
+ * Standard UI indicators for ToolRiskLevel.
+ */
+export const TOOL_RISK_UI: Readonly<Record<ToolRiskLevel, ToolRiskUIMetadata>> = {
+  read_only: {
+    label: "Read Only",
+    shortLabel: "RO",
+    badge: "[READ_ONLY]",
+    color: "green",
+    severity: 0,
+  },
+  low: {
+    label: "Low Risk",
+    shortLabel: "LOW",
+    badge: "[LOW]",
+    color: "cyan",
+    severity: 1,
+  },
+  medium: {
+    label: "Medium Risk",
+    shortLabel: "MED",
+    badge: "[MEDIUM]",
+    color: "yellow",
+    severity: 2,
+  },
+  high: {
+    label: "High Risk",
+    shortLabel: "HIGH",
+    badge: "[HIGH]",
+    color: "red",
+    severity: 3,
+  },
+  critical: {
+    label: "Critical Risk",
+    shortLabel: "CRIT",
+    badge: "[CRITICAL]",
+    color: "magenta",
+    severity: 4,
   },
 };
 

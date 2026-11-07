@@ -28,6 +28,7 @@ export * from "./events.ts";
 export * from "./reports.ts";
 export * from "./memory.ts";
 export * from "./providers.ts";
+export * from "./tools.ts";
 export * from "./budget.ts";
 export * from "./results.ts";
 export * from "./repositories.ts";
