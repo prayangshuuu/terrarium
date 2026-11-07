@@ -19,6 +19,7 @@ export * from "./departments.ts";
 export * from "./agent.ts";
 export * from "./tasks.ts";
 export * from "./planning.ts";
+export * from "./orchestration.ts";
 export * from "./execution.ts";
 export * from "./session.ts";
 export * from "./artifacts.ts";

@@ -181,6 +181,36 @@ export class BudgetExceededError extends TerrariumError {
 }
 
 /**
+ * Thrown when an operation exceeds configured dollar spend limit.
+ */
+export class SpendLimitExceededError extends BudgetExceededError {
+  constructor(currentSpendUsd: number, spendLimitUsd: number, scope = "task") {
+    super(scope, currentSpendUsd, spendLimitUsd, "usd");
+    const formattedCurrent = `$${currentSpendUsd.toFixed(2)}`;
+    const formattedLimit = `$${spendLimitUsd.toFixed(2)}`;
+    this.message = `Spend limit exceeded for scope '${scope}': consumed ${formattedCurrent} of ${formattedLimit} limit`;
+    this.name = "SpendLimitExceededError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an operation exceeds configured timeout limit.
+ */
+export class TimeoutError extends TerrariumError {
+  readonly timeoutMs: number;
+  readonly scope: string;
+
+  constructor(message: string, timeoutMs: number, scope = "operation") {
+    super(message, "TIMEOUT", { timeoutMs, scope });
+    this.name = "TimeoutError";
+    this.timeoutMs = timeoutMs;
+    this.scope = scope;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
  * Provider-level communication, rate limit, or model execution error.
  */
 export class ProviderError extends TerrariumError {
@@ -330,6 +360,26 @@ export class AgentRegistryError extends TerrariumError {
     });
     this.name = "AgentRegistryError";
     this.operation = operation;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when delegation exceeds the configured maximum depth limit.
+ */
+export class DelegationDepthExceededError extends TerrariumError {
+  readonly currentDepth: number;
+  readonly maxDepth: number;
+
+  constructor(currentDepth: number, maxDepth: number) {
+    super(
+      `Delegation depth limit exceeded: attempted depth ${currentDepth} exceeds maximum allowed depth of ${maxDepth}`,
+      "DELEGATION_LIMIT_EXCEEDED",
+      { currentDepth, maxDepth }
+    );
+    this.name = "DelegationDepthExceededError";
+    this.currentDepth = currentDepth;
+    this.maxDepth = maxDepth;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }

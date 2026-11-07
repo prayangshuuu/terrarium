@@ -6,3 +6,4 @@
 
 export * from "./agent-commands.ts";
 export * from "./task-commands.ts";
+export * from "./orchestrator-commands.ts";
