@@ -22,6 +22,7 @@ import { createSqliteDatabase, SqliteDatabase } from "./persistence/index.ts";
 import { createAgentRegistry } from "./registry/index.ts";
 import { createTaskIntakeService, TaskIntakeService } from "./intake/index.ts";
 import { createBoundedCoordinator, BoundedCoordinator, MockAgentRuntime } from "./orchestrator/index.ts";
+import { createProviderRegistry, type ProviderRegistry } from "./providers/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
@@ -30,6 +31,7 @@ export * from "./persistence/index.ts";
 export * from "./registry/index.ts";
 export * from "./intake/index.ts";
 export * from "./orchestrator/index.ts";
+export * from "./providers/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -43,6 +45,7 @@ export interface CoreEngine {
   readonly registry: AgentRegistry;
   readonly intake: TaskIntakeService;
   readonly coordinator: BoundedCoordinator;
+  readonly providers: ProviderRegistry;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -52,6 +55,7 @@ export interface CreateCoreEngineOptions {
   readonly config?: TerrariumConfig;
   readonly enableDatabase?: boolean;
   readonly runtime?: MockAgentRuntime;
+  readonly providers?: ProviderRegistry;
 }
 
 /**
@@ -81,6 +85,9 @@ export function createCoreEngine(
     repositories: db,
     runtime: !isDirectConfig ? (optionsOrConfig as CreateCoreEngineOptions).runtime : undefined,
   });
+  const providers = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).providers
+    ? (optionsOrConfig as CreateCoreEngineOptions).providers!
+    : createProviderRegistry({ config });
 
   return {
     config,
@@ -88,6 +95,7 @@ export function createCoreEngine(
     registry,
     intake,
     coordinator,
+    providers,
     getState(): CoreEngineState {
       return {
         status,

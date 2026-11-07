@@ -14,6 +14,13 @@ export type TerrariumErrorCode =
   | "PERMISSION_DENIED"
   | "BUDGET_EXCEEDED"
   | "PROVIDER_ERROR"
+  | "PROVIDER_AUTHENTICATION_ERROR"
+  | "PROVIDER_RATE_LIMIT_ERROR"
+  | "PROVIDER_TIMEOUT_ERROR"
+  | "PROVIDER_NETWORK_ERROR"
+  | "PROVIDER_INVALID_REQUEST_ERROR"
+  | "PROVIDER_SERVER_ERROR"
+  | "PROVIDER_UNAUTHORIZED_CALL_ERROR"
   | "DELEGATION_LIMIT_EXCEEDED"
   | "DATABASE_ERROR"
   | "DUPLICATE_ENTITY"
@@ -224,14 +231,112 @@ export class ProviderError extends TerrariumError {
     provider: string,
     isRetryable = false,
     model?: string,
-    statusCode?: number
+    statusCode?: number,
+    code: TerrariumErrorCode = "PROVIDER_ERROR"
   ) {
-    super(message, "PROVIDER_ERROR", { provider, model, isRetryable, statusCode });
+    super(message, code, { provider, model, isRetryable, statusCode });
     this.name = "ProviderError";
     this.provider = provider;
     this.model = model;
     this.isRetryable = isRetryable;
     this.statusCode = statusCode;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when provider authentication fails (e.g. invalid or missing API key, 401/403).
+ */
+export class ProviderAuthenticationError extends ProviderError {
+  constructor(message: string, provider: string, model?: string) {
+    super(message, provider, false, model, 401, "PROVIDER_AUTHENTICATION_ERROR");
+    this.name = "ProviderAuthenticationError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when provider rate limit is exceeded (HTTP 429), containing optional retry-after metadata.
+ */
+export class ProviderRateLimitError extends ProviderError {
+  readonly retryAfterMs?: number;
+
+  constructor(message: string, provider: string, retryAfterMs?: number, model?: string) {
+    super(message, provider, true, model, 429, "PROVIDER_RATE_LIMIT_ERROR");
+    this.name = "ProviderRateLimitError";
+    this.retryAfterMs = retryAfterMs;
+    (this as any).details = { ...(this.details ?? {}), retryAfterMs };
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when a provider request or stream chunk times out.
+ */
+export class ProviderTimeoutError extends ProviderError {
+  readonly timeoutMs: number;
+
+  constructor(message: string, provider: string, timeoutMs: number, model?: string) {
+    super(message, provider, true, model, 408, "PROVIDER_TIMEOUT_ERROR");
+    this.name = "ProviderTimeoutError";
+    this.timeoutMs = timeoutMs;
+    (this as any).details = { ...(this.details ?? {}), timeoutMs };
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown on low-level connection failures, DNS lookup failures, or network disconnections.
+ */
+export class ProviderNetworkError extends ProviderError {
+  constructor(message: string, provider: string, model?: string) {
+    super(message, provider, true, model, undefined, "PROVIDER_NETWORK_ERROR");
+    this.name = "ProviderNetworkError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when the model request parameters, schema, or prompt length is invalid (HTTP 400).
+ */
+export class ProviderInvalidRequestError extends ProviderError {
+  constructor(message: string, provider: string, model?: string) {
+    super(message, provider, false, model, 400, "PROVIDER_INVALID_REQUEST_ERROR");
+    this.name = "ProviderInvalidRequestError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown on 5xx upstream server errors or model overload conditions.
+ */
+export class ProviderServerError extends ProviderError {
+  constructor(message: string, provider: string, statusCode = 500, model?: string) {
+    super(message, provider, true, model, statusCode, "PROVIDER_SERVER_ERROR");
+    this.name = "ProviderServerError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an external/paid provider API call is attempted without explicit authorization or valid credentials.
+ * Enforces PLAN_CONTEXT.md Section 7 and Prompt 9 authorization rules.
+ */
+export class ProviderUnauthorizedCallError extends ProviderError {
+  readonly reason: string;
+
+  constructor(provider: string, reason: string, model?: string) {
+    super(
+      `External call blocked for provider '${provider}': ${reason}. Explicit authorization or configured credentials required.`,
+      provider,
+      false,
+      model,
+      403,
+      "PROVIDER_UNAUTHORIZED_CALL_ERROR"
+    );
+    this.name = "ProviderUnauthorizedCallError";
+    this.reason = reason;
+    (this as any).details = { ...(this.details ?? {}), reason };
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
