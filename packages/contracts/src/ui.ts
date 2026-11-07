@@ -11,6 +11,11 @@ import { type ExecutionStatus } from "./execution.ts";
 import { type ApprovalStatus } from "./approvals.ts";
 import { type AgentDepartment } from "./departments.ts";
 import { type ToolRiskLevel } from "./tools.ts";
+import {
+  type MemoryCategory,
+  type MemoryConfidence,
+  type MemoryFreshnessStatus,
+} from "./memory.ts";
 
 export type TerminalColorName =
   | "default"
@@ -341,3 +346,119 @@ export const USER_FACING_TERMS = {
   AGENT_DEBATE: "Agent-to-Agent Debate",
   PRESERVED_DISAGREEMENT: "Preserved Specialist Disagreement",
 } as const;
+
+/**
+ * UI visual indicators for memory freshness status (A4 & A5).
+ */
+export const MEMORY_FRESHNESS_UI: Readonly<Record<MemoryFreshnessStatus, StatusUIMetadata>> = {
+  fresh: {
+    label: "Fresh",
+    shortLabel: "FRSH",
+    glyph: "🟢",
+    color: "green",
+    description: "Memory is up-to-date and validated for active use",
+  },
+  stale: {
+    label: "Stale",
+    shortLabel: "STAL",
+    glyph: "🟡",
+    color: "yellow",
+    description: "Memory has exceeded freshness window and needs revalidation before reliance",
+  },
+  expired: {
+    label: "Expired",
+    shortLabel: "EXPD",
+    glyph: "🔴",
+    color: "red",
+    description: "Memory is obsolete and should not be relied upon without verification",
+  },
+  superseded: {
+    label: "Superseded",
+    shortLabel: "SPRS",
+    glyph: "⚪",
+    color: "gray",
+    description: "Memory has been replaced by a newer decision or finding",
+  },
+};
+
+/**
+ * UI visual indicators for memory confidence levels (A4 & A5).
+ */
+export const MEMORY_CONFIDENCE_UI: Readonly<
+  Record<MemoryConfidence, { readonly label: string; readonly badge: string; readonly color: TerminalColorName }>
+> = {
+  confirmed: {
+    label: "Confirmed Fact",
+    badge: "[CONFIRMED]",
+    color: "green",
+  },
+  hypothesis: {
+    label: "Hypothesis (Unverified)",
+    badge: "[HYPOTHESIS]",
+    color: "yellow",
+  },
+  inferred: {
+    label: "Inferred Finding",
+    badge: "[INFERRED]",
+    color: "cyan",
+  },
+  simulated: {
+    label: "Simulated Persona",
+    badge: "[SIMULATED]",
+    color: "magenta",
+  },
+};
+
+/**
+ * UI visual metadata for memory categories (A4 & A5).
+ */
+export const MEMORY_CATEGORY_UI: Readonly<
+  Record<MemoryCategory, { readonly label: string; readonly icon: string; readonly color: TerminalColorName }>
+> = {
+  project_overview: {
+    label: "Project Overview",
+    icon: "📋",
+    color: "blue",
+  },
+  confirmed_requirement: {
+    label: "Requirement",
+    icon: "✅",
+    color: "green",
+  },
+  decision_rationale: {
+    label: "Decision Record",
+    icon: "⚖️",
+    color: "cyan",
+  },
+  architecture_knowledge: {
+    label: "Architecture",
+    icon: "🏛️",
+    color: "blue",
+  },
+  research_finding: {
+    label: "Research Finding",
+    icon: "🔍",
+    color: "magenta",
+  },
+  open_question: {
+    label: "Open Question",
+    icon: "❓",
+    color: "yellow",
+  },
+  known_risk: {
+    label: "Known Risk",
+    icon: "⚠️",
+    color: "red",
+  },
+  agent_summary: {
+    label: "Agent Task Summary",
+    icon: "📝",
+    color: "gray",
+  },
+  user_preference: {
+    label: "User Preference",
+    icon: "⭐",
+    color: "yellow",
+  },
+};
+

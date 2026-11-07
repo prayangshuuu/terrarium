@@ -19,7 +19,7 @@ import { type Artifact } from "./artifacts.ts";
 import { type ApprovalRequest, type ApprovalStatus } from "./approvals.ts";
 import { type DomainEvent } from "./events.ts";
 import { type Report } from "./reports.ts";
-import { type MemoryCategory, type MemoryItem } from "./memory.ts";
+import { type MemoryCategory, type MemoryItem, type MemoryFilter } from "./memory.ts";
 import { type AgentDepartment } from "./departments.ts";
 import { type AgentProfile, type AgentProfileStatus } from "./agent.ts";
 import { type TaskPlan, type PlanStatus, type TaskType, type RiskLevel } from "./planning.ts";
@@ -115,11 +115,13 @@ export interface ReportRepository {
 
 export interface MemoryRepository {
   findById(id: string): Promise<Result<MemoryItem | null, DatabaseError>>;
-  findByKey(category: MemoryCategory, key: string): Promise<Result<MemoryItem | null, DatabaseError>>;
-  list(category?: MemoryCategory, includeArchived?: boolean): Promise<Result<readonly MemoryItem[], DatabaseError>>;
+  findByKey(category: MemoryCategory, key: string, projectId?: string): Promise<Result<MemoryItem | null, DatabaseError>>;
+  list(category?: MemoryCategory, includeArchived?: boolean, projectId?: string): Promise<Result<readonly MemoryItem[], DatabaseError>>;
+  listByFilter(filter: MemoryFilter): Promise<Result<readonly MemoryItem[], DatabaseError>>;
   create(item: MemoryItem): Promise<Result<MemoryItem, DuplicateEntityError | DatabaseError>>;
   update(item: MemoryItem): Promise<Result<MemoryItem, NotFoundError | DatabaseError>>;
   delete(id: string): Promise<Result<boolean, DatabaseError>>;
+  archive(id: string): Promise<Result<boolean, DatabaseError>>;
 }
 
 export interface AgentProfileQueryOptions {

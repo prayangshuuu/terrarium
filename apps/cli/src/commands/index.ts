@@ -12,3 +12,5 @@ export * from "./stream-renderer.ts";
 export * from "./tool-commands.ts";
 export * from "./approval-commands.ts";
 export * from "./risk-communicator.ts";
+export * from "./memory-commands.ts";
+export * from "./context-commands.ts";

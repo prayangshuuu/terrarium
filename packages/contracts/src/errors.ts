@@ -38,6 +38,12 @@ export type TerrariumErrorCode =
   | "APPROVAL_CANCELLED"
   | "DUPLICATE_EXECUTION"
   | "TOOL_TIMEOUT"
+  | "MEMORY_ERROR"
+  | "MEMORY_NOT_FOUND"
+  | "MEMORY_CONFLICT"
+  | "STALE_MEMORY"
+  | "CONTEXT_BUDGET_EXCEEDED"
+  | "CROSS_PROJECT_CONTEXT_LEAK"
   | "INTERNAL_ERROR";
 
 export interface ValidationIssue {
@@ -653,5 +659,115 @@ export class DuplicateExecutionError extends TerrariumError {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+/**
+ * Base error for memory and knowledge management domain failures.
+ */
+export class MemoryError extends TerrariumError {
+  constructor(message: string, code: TerrariumErrorCode = "MEMORY_ERROR", details?: Record<string, unknown>) {
+    super(message, code, details);
+    this.name = "MemoryError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when a requested memory item cannot be found.
+ */
+export class MemoryNotFoundError extends NotFoundError {
+  constructor(memoryId: string, projectId?: string) {
+    super("MemoryItem", memoryId);
+    this.message = `Memory item '${memoryId}' not found${projectId ? ` in project '${projectId}'` : ""}.`;
+    this.name = "MemoryNotFoundError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when a new memory assertion directly conflicts with an existing durable memory item.
+ * Prevents silent overwriting and mandates explicit reconciliation or disagreement preservation.
+ */
+export class MemoryConflictError extends MemoryError {
+  readonly existingId: string;
+  readonly incomingKey: string;
+  readonly reason: string;
+
+  constructor(existingId: string, incomingKey: string, reason: string) {
+    super(
+      `Memory conflict on key '${incomingKey}': conflicts with existing memory '${existingId}'. Reason: ${reason}`,
+      "MEMORY_CONFLICT",
+      { existingId, incomingKey, reason }
+    );
+    this.name = "MemoryConflictError";
+    this.existingId = existingId;
+    this.incomingKey = incomingKey;
+    this.reason = reason;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an operation attempts to rely on unvalidated, expired, or stale memory.
+ */
+export class StaleMemoryError extends MemoryError {
+  readonly memoryId: string;
+  readonly ageDays: number;
+
+  constructor(memoryId: string, ageDays: number, message?: string) {
+    super(
+      message ?? `Memory item '${memoryId}' is stale (${ageDays} days old) and requires revalidation before reliance.`,
+      "STALE_MEMORY",
+      { memoryId, ageDays }
+    );
+    this.name = "StaleMemoryError";
+    this.memoryId = memoryId;
+    this.ageDays = ageDays;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when assembled context package exceeds the agent's allocated context token budget.
+ */
+export class ContextBudgetExceededError extends MemoryError {
+  readonly agentSlug: string;
+  readonly tokenEstimate: number;
+  readonly tokenLimit: number;
+
+  constructor(agentSlug: string, tokenEstimate: number, tokenLimit: number) {
+    super(
+      `Context package for agent '${agentSlug}' estimated at ${tokenEstimate} tokens, exceeding budget limit of ${tokenLimit} tokens.`,
+      "CONTEXT_BUDGET_EXCEEDED",
+      { agentSlug, tokenEstimate, tokenLimit }
+    );
+    this.name = "ContextBudgetExceededError";
+    this.agentSlug = agentSlug;
+    this.tokenEstimate = tokenEstimate;
+    this.tokenLimit = tokenLimit;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an attempt is made to access or inject another project's private memory into an agent context.
+ * Strictly enforces PLAN.md Section 14 (Prevent one project's private context from leaking into another project).
+ */
+export class CrossProjectContextLeakError extends MemoryError {
+  readonly targetProjectId: string;
+  readonly attemptedProjectId: string;
+
+  constructor(targetProjectId: string, attemptedProjectId: string) {
+    super(
+      `Cross-project context access violation: cannot access project '${attemptedProjectId}' memory from project '${targetProjectId}'.`,
+      "CROSS_PROJECT_CONTEXT_LEAK",
+      { targetProjectId, attemptedProjectId }
+    );
+    this.name = "CrossProjectContextLeakError";
+    this.targetProjectId = targetProjectId;
+    this.attemptedProjectId = attemptedProjectId;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 
 

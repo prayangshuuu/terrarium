@@ -25,6 +25,8 @@ import { createBoundedCoordinator, BoundedCoordinator, MockAgentRuntime } from "
 import { createProviderRegistry, type ProviderRegistry } from "./providers/index.ts";
 import { ApprovalManager } from "./approvals/index.ts";
 import { createToolRegistry, DefaultToolRegistry } from "./tools/index.ts";
+import { MemoryManager } from "./memory/index.ts";
+import { ContextAssembler } from "./context/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
@@ -36,6 +38,8 @@ export * from "./orchestrator/index.ts";
 export * from "./providers/index.ts";
 export * from "./approvals/index.ts";
 export * from "./tools/index.ts";
+export * from "./memory/index.ts";
+export * from "./context/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -52,6 +56,8 @@ export interface CoreEngine {
   readonly providers: ProviderRegistry;
   readonly tools: DefaultToolRegistry;
   readonly approvals: ApprovalManager;
+  readonly memory: MemoryManager;
+  readonly context: ContextAssembler;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -64,6 +70,8 @@ export interface CreateCoreEngineOptions {
   readonly providers?: ProviderRegistry;
   readonly tools?: DefaultToolRegistry;
   readonly approvals?: ApprovalManager;
+  readonly memory?: MemoryManager;
+  readonly context?: ContextAssembler;
 }
 
 /**
@@ -111,6 +119,16 @@ export function createCoreEngine(
         eventRepository: db?.events,
       });
 
+  const memory = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).memory
+    ? (optionsOrConfig as CreateCoreEngineOptions).memory!
+    : new MemoryManager({
+        repository: db?.memory,
+      });
+
+  const context = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).context
+    ? (optionsOrConfig as CreateCoreEngineOptions).context!
+    : new ContextAssembler(memory);
+
   return {
     config,
     db,
@@ -120,6 +138,8 @@ export function createCoreEngine(
     providers,
     tools,
     approvals,
+    memory,
+    context,
     getState(): CoreEngineState {
       return {
         status,
