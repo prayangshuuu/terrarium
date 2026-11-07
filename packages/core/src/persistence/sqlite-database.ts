@@ -27,6 +27,7 @@ import { SqliteApprovalRepository } from "./repositories/sqlite-approval-reposit
 import { SqliteEventRepository } from "./repositories/sqlite-event-repository.ts";
 import { SqliteReportRepository } from "./repositories/sqlite-report-repository.ts";
 import { SqliteMemoryRepository } from "./repositories/sqlite-memory-repository.ts";
+import { SqliteAgentProfileRepository } from "./repositories/sqlite-agent-profile-repository.ts";
 
 export interface SqliteDatabaseOptions {
   readonly path: string;
@@ -44,6 +45,7 @@ export class SqliteDatabase implements TerrariumRepositories {
   readonly events: SqliteEventRepository;
   readonly reports: SqliteReportRepository;
   readonly memory: SqliteMemoryRepository;
+  readonly agentProfiles: SqliteAgentProfileRepository;
 
   private isInitialized = false;
 
@@ -60,6 +62,7 @@ export class SqliteDatabase implements TerrariumRepositories {
     this.events = new SqliteEventRepository(rawDb);
     this.reports = new SqliteReportRepository(rawDb);
     this.memory = new SqliteMemoryRepository(rawDb);
+    this.agentProfiles = new SqliteAgentProfileRepository(rawDb);
 
     if (options.autoMigrate ?? true) {
       const initRes = this.initialize();

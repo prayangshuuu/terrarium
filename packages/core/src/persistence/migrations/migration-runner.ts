@@ -18,6 +18,11 @@ import {
   MIGRATION_001_UP,
   MIGRATION_001_VERSION,
 } from "./001_initial_schema.ts";
+import {
+  MIGRATION_002_NAME,
+  MIGRATION_002_UP,
+  MIGRATION_002_VERSION,
+} from "./002_agent_profiles.ts";
 
 export interface MigrationDefinition {
   readonly version: number;
@@ -30,6 +35,11 @@ export const REGISTERED_MIGRATIONS: readonly MigrationDefinition[] = [
     version: MIGRATION_001_VERSION,
     name: MIGRATION_001_NAME,
     up: MIGRATION_001_UP,
+  },
+  {
+    version: MIGRATION_002_VERSION,
+    name: MIGRATION_002_NAME,
+    up: MIGRATION_002_UP,
   },
 ];
 

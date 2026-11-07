@@ -1,12 +1,12 @@
 /**
  * @terrarium/contracts - agent.ts
  *
- * Agent profile, capability catalog, limits, and validation contracts.
+ * Agent profile, capability catalog, limits, constraints, and validation contracts.
  * Aligns with PLAN.md Section 4 (Organization and Agent Model).
  */
 
 import { type BaseEntity, type Result, ok, fail } from "./base.ts";
-import { DomainValidationError, type ValidationIssue } from "./errors.ts";
+import { DomainValidationError, type ValidationIssue, type TerrariumError, type NotFoundError } from "./errors.ts";
 import { AGENT_DEPARTMENTS, type AgentDepartment } from "./departments.ts";
 import {
   isRecord,
@@ -35,6 +35,8 @@ export interface AgentCapability {
   readonly department: AgentDepartment;
   readonly requiredPermissions: readonly string[];
   readonly isConsequential: boolean;
+  readonly category?: string;
+  readonly keywords?: readonly string[];
 }
 
 /**
@@ -44,16 +46,29 @@ export interface ModelPreference {
   readonly tier: ModelTier;
   readonly preferredProvider?: string;
   readonly preferredModel?: string;
+  readonly fallbackModel?: string;
   readonly temperature?: number;
 }
 
 /**
- * Execution and delegation limits assigned to an agent profile.
+ * Execution and delegation limits assigned to an agent profile (backward-compatible).
  */
 export interface AgentLimits {
   readonly maxTokensPerTurn: number;
   readonly maxDelegationDepth: number;
   readonly maxChildrenTasks: number;
+}
+
+/**
+ * Comprehensive operational constraints assigned to an agent profile.
+ */
+export interface AgentConstraints {
+  readonly maxTokensPerTurn: number;
+  readonly maxDelegationDepth: number;
+  readonly maxChildrenTasks: number;
+  readonly timeoutMs?: number;
+  readonly disallowedTools?: readonly string[];
+  readonly requiresApprovalForConsequential?: boolean;
 }
 
 /**
@@ -70,6 +85,7 @@ export interface PersonaAttributes {
 /**
  * Core Agent Profile entity.
  * Represents a registered role in the virtual organization.
+ * Pure data representation, completely separate from active execution instances.
  */
 export interface AgentProfile extends BaseEntity {
   readonly slug: string;
@@ -80,12 +96,106 @@ export interface AgentProfile extends BaseEntity {
   readonly description: string;
   readonly systemPromptTemplate: string;
   readonly capabilities: readonly AgentCapability[];
+  readonly supportedTasks: readonly string[];
+  readonly constraints: AgentConstraints;
   readonly limits: AgentLimits;
   readonly modelPreference: ModelPreference;
+  readonly permissions: readonly string[];
+  readonly version: string;
   readonly status: AgentProfileStatus;
   readonly tags: readonly string[];
   readonly personaAttributes?: PersonaAttributes;
   readonly metadata?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Filter criteria for listing agent profiles.
+ */
+export interface AgentProfileFilter {
+  readonly department?: AgentDepartment;
+  readonly status?: AgentProfileStatus;
+  readonly tag?: string;
+  readonly modelTier?: ModelTier;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
+/**
+ * Search query criteria for finding agent profiles.
+ */
+export interface AgentSearchQuery {
+  readonly query: string;
+  readonly department?: AgentDepartment;
+  readonly status?: AgentProfileStatus;
+  readonly limit?: number;
+}
+
+/**
+ * Criteria for resolving matching agent candidates for a task.
+ */
+export interface AgentResolveCriteria {
+  readonly taskType?: string;
+  readonly department?: AgentDepartment;
+  readonly requiredCapabilities?: readonly string[];
+  readonly requiredPermissions?: readonly string[];
+  readonly status?: AgentProfileStatus;
+  readonly preferFastTier?: boolean;
+  readonly tags?: readonly string[];
+  readonly includeDisabled?: boolean;
+}
+
+/**
+ * Scored agent match result from candidate resolution.
+ */
+export interface AgentMatchScore {
+  readonly profile: AgentProfile;
+  readonly score: number;
+  readonly matchedCapabilities: readonly string[];
+  readonly matchedTasks: readonly string[];
+  readonly reasons: readonly string[];
+}
+
+/**
+ * Input structure for registering or updating an agent profile.
+ */
+export interface AgentProfileInput {
+  readonly id?: string;
+  readonly slug: string;
+  readonly name: string;
+  readonly displayName?: string;
+  readonly department: AgentDepartment;
+  readonly role: string;
+  readonly description: string;
+  readonly systemPromptTemplate: string;
+  readonly capabilities?: readonly AgentCapability[];
+  readonly supportedTasks?: readonly string[];
+  readonly constraints?: Partial<AgentConstraints>;
+  readonly limits?: Partial<AgentLimits>;
+  readonly modelPreference?: Partial<ModelPreference>;
+  readonly permissions?: readonly string[];
+  readonly version?: string;
+  readonly status?: AgentProfileStatus;
+  readonly tags?: readonly string[];
+  readonly personaAttributes?: PersonaAttributes;
+  readonly metadata?: Readonly<Record<string, unknown>>;
+  readonly createdAt?: string;
+  readonly updatedAt?: string;
+}
+
+/**
+ * Registry interface for agent profile operations.
+ * Operations are strictly metadata-driven and never invoke model providers or start sessions.
+ */
+export interface AgentRegistry {
+  register(profile: AgentProfileInput): Promise<Result<AgentProfile, TerrariumError>>;
+  list(filter?: AgentProfileFilter): Promise<Result<readonly AgentProfile[], TerrariumError>>;
+  search(query: AgentSearchQuery): Promise<Result<readonly AgentProfile[], TerrariumError>>;
+  inspect(idOrSlug: string): Promise<Result<AgentProfile, NotFoundError | TerrariumError>>;
+  enable(idOrSlug: string): Promise<Result<AgentProfile, NotFoundError | TerrariumError>>;
+  disable(idOrSlug: string, reason?: string): Promise<Result<AgentProfile, NotFoundError | TerrariumError>>;
+  validate(profile: unknown): Result<AgentProfile, DomainValidationError>;
+  resolve(criteria: AgentResolveCriteria): Promise<Result<readonly AgentProfile[], TerrariumError>>;
+  count(department?: AgentDepartment): Promise<number>;
 }
 
 /**
@@ -113,6 +223,20 @@ export function validateAgentCapability(
     )
   );
 
+  let category: string | undefined;
+  if (value.category !== undefined) {
+    category = collector.check(validateString(value.category, `${path}.category`, { minLength: 1, maxLength: 100 }));
+  }
+
+  let keywords: readonly string[] | undefined;
+  if (value.keywords !== undefined) {
+    keywords = collector.check(
+      validateArray(value.keywords, `${path}.keywords`, (k, kPath) =>
+        validateString(k, kPath, { minLength: 1, maxLength: 50 })
+      )
+    );
+  }
+
   if (
     collector.hasIssues() ||
     id === undefined ||
@@ -131,6 +255,79 @@ export function validateAgentCapability(
     department,
     requiredPermissions: perms ?? [],
     isConsequential,
+    category,
+    keywords,
+  });
+}
+
+/**
+ * Validates agent constraints or limits.
+ */
+export function validateAgentConstraints(
+  value: unknown,
+  path = "constraints"
+): Result<AgentConstraints, ValidationIssue[]> {
+  if (!isRecord(value)) {
+    return fail([{ path, message: `Expected object for ${path}`, received: value }]);
+  }
+
+  const collector = new ValidationCollector();
+  const maxTokens = collector.check(
+    validateNumber(value.maxTokensPerTurn, `${path}.maxTokensPerTurn`, {
+      min: 100,
+      max: 1000000,
+      integer: true,
+    })
+  );
+  const maxDepth = collector.check(
+    validateNumber(value.maxDelegationDepth, `${path}.maxDelegationDepth`, {
+      min: 0,
+      max: 10,
+      integer: true,
+    })
+  );
+  const maxChildren = collector.check(
+    validateNumber(value.maxChildrenTasks, `${path}.maxChildrenTasks`, {
+      min: 0,
+      max: 50,
+      integer: true,
+    })
+  );
+
+  let timeoutMs: number | undefined;
+  if (value.timeoutMs !== undefined) {
+    timeoutMs = collector.check(
+      validateNumber(value.timeoutMs, `${path}.timeoutMs`, { min: 1000, max: 3600000, integer: true })
+    );
+  }
+
+  let disallowedTools: readonly string[] | undefined;
+  if (value.disallowedTools !== undefined) {
+    disallowedTools = collector.check(
+      validateArray(value.disallowedTools, `${path}.disallowedTools`, (t, tPath) =>
+        validateString(t, tPath, { minLength: 1, maxLength: 100 })
+      )
+    );
+  }
+
+  let requiresApprovalForConsequential: boolean | undefined;
+  if (value.requiresApprovalForConsequential !== undefined) {
+    requiresApprovalForConsequential = collector.check(
+      validateBoolean(value.requiresApprovalForConsequential, `${path}.requiresApprovalForConsequential`)
+    );
+  }
+
+  if (collector.hasIssues() || maxTokens === undefined || maxDepth === undefined || maxChildren === undefined) {
+    return fail(collector.issues);
+  }
+
+  return ok({
+    maxTokensPerTurn: maxTokens,
+    maxDelegationDepth: maxDepth,
+    maxChildrenTasks: maxChildren,
+    timeoutMs,
+    disallowedTools,
+    requiresApprovalForConsequential,
   });
 }
 
@@ -175,6 +372,43 @@ export function validateAgentProfile(
   const createdAt = collector.check(validateIsoDateTime(value.createdAt, `${path}.createdAt`));
   const updatedAt = collector.check(validateIsoDateTime(value.updatedAt, `${path}.updatedAt`));
 
+  // Version: default to 1.0.0 if not provided
+  let version = "1.0.0";
+  if (value.version !== undefined) {
+    const vRes = validateString(value.version, `${path}.version`, { minLength: 1, maxLength: 50 });
+    if (vRes.success) {
+      version = vRes.data;
+    } else {
+      collector.addIssue(vRes.error);
+    }
+  }
+
+  // Supported tasks: default to empty array
+  let supportedTasks: readonly string[] = [];
+  if (value.supportedTasks !== undefined) {
+    const stRes = validateArray(value.supportedTasks, `${path}.supportedTasks`, (st, stPath) =>
+      validateString(st, stPath, { minLength: 1, maxLength: 100 })
+    );
+    if (stRes.success) {
+      supportedTasks = stRes.data;
+    } else {
+      stRes.error.forEach((issue) => collector.addIssue(issue));
+    }
+  }
+
+  // Permissions: default to empty array
+  let permissions: readonly string[] = [];
+  if (value.permissions !== undefined) {
+    const pRes = validateArray(value.permissions, `${path}.permissions`, (p, pPath) =>
+      validateString(p, pPath, { minLength: 1, maxLength: 100 })
+    );
+    if (pRes.success) {
+      permissions = pRes.data;
+    } else {
+      pRes.error.forEach((issue) => collector.addIssue(issue));
+    }
+  }
+
   // Validate capabilities
   const capabilities = collector.check(
     validateArray<AgentCapability>(value.capabilities ?? [], `${path}.capabilities`, (c, cPath) => {
@@ -184,43 +418,25 @@ export function validateAgentProfile(
     })
   );
 
-  // Validate limits
-  let limits: AgentLimits | undefined;
-  if (!isRecord(value.limits)) {
-    collector.addIssue({ path: `${path}.limits`, message: "Expected limits object", received: value.limits });
+  // Validate constraints / limits
+  let constraints: AgentConstraints | undefined;
+  const constraintsCandidate = value.constraints ?? value.limits;
+  if (!isRecord(constraintsCandidate)) {
+    collector.addIssue({
+      path: `${path}.constraints`,
+      message: "Expected constraints or limits object",
+      received: constraintsCandidate,
+    });
   } else {
-    const maxTokens = collector.check(
-      validateNumber(value.limits.maxTokensPerTurn, `${path}.limits.maxTokensPerTurn`, {
-        min: 100,
-        max: 1000000,
-        integer: true,
-      })
-    );
-    const maxDepth = collector.check(
-      validateNumber(value.limits.maxDelegationDepth, `${path}.limits.maxDelegationDepth`, {
-        min: 0,
-        max: 10,
-        integer: true,
-      })
-    );
-    const maxChildren = collector.check(
-      validateNumber(value.limits.maxChildrenTasks, `${path}.limits.maxChildrenTasks`, {
-        min: 0,
-        max: 50,
-        integer: true,
-      })
-    );
-
-    if (maxTokens !== undefined && maxDepth !== undefined && maxChildren !== undefined) {
-      limits = {
-        maxTokensPerTurn: maxTokens,
-        maxDelegationDepth: maxDepth,
-        maxChildrenTasks: maxChildren,
-      };
+    const cRes = validateAgentConstraints(constraintsCandidate, `${path}.constraints`);
+    if (!cRes.success) {
+      cRes.error.forEach((issue) => collector.addIssue(issue));
+    } else {
+      constraints = cRes.data;
     }
   }
 
-  // Validate model preference
+  // Model preference
   let modelPreference: ModelPreference | undefined;
   if (!isRecord(value.modelPreference)) {
     collector.addIssue({
@@ -235,15 +451,22 @@ export function validateAgentProfile(
     if (tier !== undefined) {
       modelPreference = {
         tier,
-        preferredProvider: typeof value.modelPreference.preferredProvider === "string"
-          ? value.modelPreference.preferredProvider
-          : undefined,
-        preferredModel: typeof value.modelPreference.preferredModel === "string"
-          ? value.modelPreference.preferredModel
-          : undefined,
-        temperature: typeof value.modelPreference.temperature === "number"
-          ? value.modelPreference.temperature
-          : undefined,
+        preferredProvider:
+          typeof value.modelPreference.preferredProvider === "string"
+            ? value.modelPreference.preferredProvider
+            : undefined,
+        preferredModel:
+          typeof value.modelPreference.preferredModel === "string"
+            ? value.modelPreference.preferredModel
+            : undefined,
+        fallbackModel:
+          typeof value.modelPreference.fallbackModel === "string"
+            ? value.modelPreference.fallbackModel
+            : undefined,
+        temperature:
+          typeof value.modelPreference.temperature === "number"
+            ? value.modelPreference.temperature
+            : undefined,
       };
     }
   }
@@ -267,11 +490,17 @@ export function validateAgentProfile(
     status === undefined ||
     createdAt === undefined ||
     updatedAt === undefined ||
-    limits === undefined ||
+    constraints === undefined ||
     modelPreference === undefined
   ) {
     return fail(collector.toError("AgentProfile validation failed"));
   }
+
+  const limits: AgentLimits = {
+    maxTokensPerTurn: constraints.maxTokensPerTurn,
+    maxDelegationDepth: constraints.maxDelegationDepth,
+    maxChildrenTasks: constraints.maxChildrenTasks,
+  };
 
   return ok({
     id,
@@ -283,8 +512,12 @@ export function validateAgentProfile(
     description,
     systemPromptTemplate,
     capabilities: capabilities ?? [],
+    supportedTasks,
+    constraints,
     limits,
     modelPreference,
+    permissions,
+    version,
     status,
     tags: tags ?? [],
     personaAttributes: value.personaAttributes as PersonaAttributes | undefined,

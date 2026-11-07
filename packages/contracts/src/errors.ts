@@ -9,6 +9,8 @@ export type TerrariumErrorCode =
   | "VALIDATION_ERROR"
   | "INVALID_STATE_TRANSITION"
   | "NOT_FOUND"
+  | "PROFILE_NOT_FOUND"
+  | "AGENT_REGISTRY_ERROR"
   | "PERMISSION_DENIED"
   | "BUDGET_EXCEEDED"
   | "PROVIDER_ERROR"
@@ -299,4 +301,37 @@ export class MigrationMismatchError extends DatabaseError {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+/**
+ * Thrown when an agent profile cannot be found in the registry.
+ */
+export class ProfileNotFoundError extends NotFoundError {
+  constructor(idOrSlug: string, message?: string) {
+    super("AgentProfile", idOrSlug);
+    if (message) {
+      this.message = message;
+    }
+    (this as any).code = "PROFILE_NOT_FOUND";
+    this.name = "ProfileNotFoundError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an agent registry operation fails.
+ */
+export class AgentRegistryError extends TerrariumError {
+  readonly operation: string;
+
+  constructor(operation: string, message: string, details?: Record<string, unknown>) {
+    super(`Agent registry ${operation} failed: ${message}`, "AGENT_REGISTRY_ERROR", {
+      operation,
+      ...details,
+    });
+    this.name = "AgentRegistryError";
+    this.operation = operation;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 

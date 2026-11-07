@@ -10,6 +10,7 @@ import {
   type ExecutionStatus,
   type TerrariumPackageInfo,
   type Result,
+  type AgentRegistry,
   ok,
   fail,
 } from "@terrarium/contracts";
@@ -18,11 +19,13 @@ import {
   getDefaultConfig,
 } from "@terrarium/config";
 import { createSqliteDatabase, SqliteDatabase } from "./persistence/index.ts";
+import { createAgentRegistry } from "./registry/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
 
 export * from "./persistence/index.ts";
+export * from "./registry/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -33,6 +36,7 @@ export interface CoreEngineState {
 export interface CoreEngine {
   readonly config: TerrariumConfig;
   readonly db?: SqliteDatabase;
+  readonly registry: AgentRegistry;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -58,10 +62,14 @@ export function createCoreEngine(
   let activeExecutions = 0;
 
   const db = enableDb ? createSqliteDatabase(config.paths.dbPath) : undefined;
+  const registry = createAgentRegistry({
+    repository: db ? db.agentProfiles : undefined,
+  });
 
   return {
     config,
     db,
+    registry,
     getState(): CoreEngineState {
       return {
         status,

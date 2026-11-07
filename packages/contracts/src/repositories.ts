@@ -21,6 +21,7 @@ import { type DomainEvent } from "./events.ts";
 import { type Report } from "./reports.ts";
 import { type MemoryCategory, type MemoryItem } from "./memory.ts";
 import { type AgentDepartment } from "./departments.ts";
+import { type AgentProfile, type AgentProfileStatus } from "./agent.ts";
 
 export interface TaskQueryOptions {
   readonly status?: TaskStatus;
@@ -110,6 +111,25 @@ export interface MemoryRepository {
   delete(id: string): Promise<Result<boolean, DatabaseError>>;
 }
 
+export interface AgentProfileQueryOptions {
+  readonly department?: AgentDepartment;
+  readonly status?: AgentProfileStatus;
+  readonly tag?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
+export interface AgentProfileRepository {
+  findById(id: string): Promise<Result<AgentProfile | null, DatabaseError>>;
+  findBySlug(slug: string): Promise<Result<AgentProfile | null, DatabaseError>>;
+  list(options?: AgentProfileQueryOptions): Promise<Result<readonly AgentProfile[], DatabaseError>>;
+  search(query: string, department?: AgentDepartment, limit?: number): Promise<Result<readonly AgentProfile[], DatabaseError>>;
+  create(profile: AgentProfile): Promise<Result<AgentProfile, DuplicateEntityError | DatabaseError>>;
+  update(profile: AgentProfile): Promise<Result<AgentProfile, NotFoundError | DatabaseError>>;
+  delete(id: string): Promise<Result<boolean, DatabaseError>>;
+  count(department?: AgentDepartment): Promise<Result<number, DatabaseError>>;
+}
+
 /**
  * Composite container for all domain repositories with transaction support.
  */
@@ -123,5 +143,6 @@ export interface TerrariumRepositories {
   readonly events: EventRepository;
   readonly reports: ReportRepository;
   readonly memory: MemoryRepository;
+  readonly agentProfiles: AgentProfileRepository;
   withTransaction<T>(operation: () => Promise<T>): Promise<Result<T, DatabaseError>>;
 }
