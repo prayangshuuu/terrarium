@@ -22,6 +22,7 @@ import { type Report } from "./reports.ts";
 import { type MemoryCategory, type MemoryItem } from "./memory.ts";
 import { type AgentDepartment } from "./departments.ts";
 import { type AgentProfile, type AgentProfileStatus } from "./agent.ts";
+import { type TaskPlan, type PlanStatus, type TaskType, type RiskLevel } from "./planning.ts";
 
 export interface TaskQueryOptions {
   readonly status?: TaskStatus;
@@ -130,6 +131,24 @@ export interface AgentProfileRepository {
   count(department?: AgentDepartment): Promise<Result<number, DatabaseError>>;
 }
 
+export interface PlanQueryOptions {
+  readonly status?: PlanStatus;
+  readonly taskId?: string;
+  readonly taskType?: TaskType;
+  readonly riskLevel?: RiskLevel;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
+export interface PlanRepository {
+  findById(id: string): Promise<Result<TaskPlan | null, DatabaseError>>;
+  findByTaskId(taskId: string): Promise<Result<TaskPlan | null, DatabaseError>>;
+  list(options?: PlanQueryOptions): Promise<Result<readonly TaskPlan[], DatabaseError>>;
+  create(plan: TaskPlan): Promise<Result<TaskPlan, DuplicateEntityError | DatabaseError>>;
+  update(plan: TaskPlan): Promise<Result<TaskPlan, NotFoundError | DatabaseError>>;
+  delete(id: string): Promise<Result<boolean, DatabaseError>>;
+}
+
 /**
  * Composite container for all domain repositories with transaction support.
  */
@@ -144,5 +163,6 @@ export interface TerrariumRepositories {
   readonly reports: ReportRepository;
   readonly memory: MemoryRepository;
   readonly agentProfiles: AgentProfileRepository;
+  readonly plans: PlanRepository;
   withTransaction<T>(operation: () => Promise<T>): Promise<Result<T, DatabaseError>>;
 }

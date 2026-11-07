@@ -20,12 +20,14 @@ import {
 } from "@terrarium/config";
 import { createSqliteDatabase, SqliteDatabase } from "./persistence/index.ts";
 import { createAgentRegistry } from "./registry/index.ts";
+import { createTaskIntakeService, TaskIntakeService } from "./intake/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
 
 export * from "./persistence/index.ts";
 export * from "./registry/index.ts";
+export * from "./intake/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -37,6 +39,7 @@ export interface CoreEngine {
   readonly config: TerrariumConfig;
   readonly db?: SqliteDatabase;
   readonly registry: AgentRegistry;
+  readonly intake: TaskIntakeService;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -65,11 +68,16 @@ export function createCoreEngine(
   const registry = createAgentRegistry({
     repository: db ? db.agentProfiles : undefined,
   });
+  const intake = createTaskIntakeService({
+    registry,
+    repositories: db,
+  });
 
   return {
     config,
     db,
     registry,
+    intake,
     getState(): CoreEngineState {
       return {
         status,

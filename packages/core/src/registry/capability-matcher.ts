@@ -90,7 +90,10 @@ export function scoreAgentCandidates(
             c.id.toLowerCase() === reqLower ||
             c.name.toLowerCase() === reqLower ||
             c.category?.toLowerCase() === reqLower ||
-            c.keywords?.some((k) => k.toLowerCase() === reqLower)
+            c.keywords?.some((k) => {
+              const kLower = k.toLowerCase();
+              return kLower === reqLower || reqLower.includes(kLower) || kLower.includes(reqLower);
+            })
         );
 
         if (found) {
@@ -159,5 +162,8 @@ export function resolveAgentCandidates(
   criteria: AgentResolveCriteria
 ): AgentProfile[] {
   const scored = scoreAgentCandidates(profiles, criteria);
-  return scored.map((s) => s.profile);
+  const profilesList = scored.map((s) => s.profile);
+  return criteria.limit !== undefined && criteria.limit > 0
+    ? profilesList.slice(0, criteria.limit)
+    : profilesList;
 }

@@ -142,6 +142,7 @@ export interface AgentResolveCriteria {
   readonly preferFastTier?: boolean;
   readonly tags?: readonly string[];
   readonly includeDisabled?: boolean;
+  readonly limit?: number;
 }
 
 /**
