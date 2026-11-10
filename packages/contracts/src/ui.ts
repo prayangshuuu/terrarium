@@ -345,6 +345,10 @@ export const USER_FACING_TERMS = {
   ENGINEERING_STUDIO: "Engineering Studio",
   AGENT_DEBATE: "Agent-to-Agent Debate",
   PRESERVED_DISAGREEMENT: "Preserved Specialist Disagreement",
+  TOKEN_BUDGET: "Token Budget",
+  ESTIMATED_SPEND: "Estimated Cost (Simulated)",
+  ESTIMATE_DISCLAIMER: "Estimates are operational approximations, not exact provider invoices (PLAN.md Section 13.3).",
+  MODEL_ROUTING: "Model Tier Routing",
 } as const;
 
 /**
@@ -461,4 +465,137 @@ export const MEMORY_CATEGORY_UI: Readonly<
     color: "yellow",
   },
 };
+
+/**
+ * Canonical 10 interactive workspace areas defined in PLAN.md Section 16.2.
+ */
+export const WORKSPACE_IDS = [
+  "overview",
+  "ecosystem",
+  "departments",
+  "conversations",
+  "tasks",
+  "studio",
+  "memory",
+  "reports",
+  "analytics",
+  "settings",
+] as const;
+
+export type WorkspaceId = (typeof WORKSPACE_IDS)[number];
+
+export interface WorkspaceMetadata {
+  readonly id: WorkspaceId;
+  readonly label: string;
+  readonly shortLabel: string;
+  readonly shortcut: string;
+  readonly index: number;
+  readonly icon: string;
+  readonly description: string;
+  readonly plannedPrompt: number;
+}
+
+export const WORKSPACE_AREAS: Readonly<Record<WorkspaceId, WorkspaceMetadata>> = {
+  overview: {
+    id: "overview",
+    label: "Overview",
+    shortLabel: "OVERVIEW",
+    shortcut: "1",
+    index: 1,
+    icon: "◈",
+    description: "System pulse, active agents, queue summary, and recent activity",
+    plannedPrompt: 15,
+  },
+  ecosystem: {
+    id: "ecosystem",
+    label: "Agent Ecosystem",
+    shortLabel: "AGENTS",
+    shortcut: "2",
+    index: 2,
+    icon: "👥",
+    description: "Virtual organization directory, specialist profiles, and simulated personas",
+    plannedPrompt: 15,
+  },
+  departments: {
+    id: "departments",
+    label: "Departments",
+    shortLabel: "DEPTS",
+    shortcut: "3",
+    index: 3,
+    icon: "🏛",
+    description: "Department hierarchy, leadership teams, and organizational taxonomies",
+    plannedPrompt: 15,
+  },
+  conversations: {
+    id: "conversations",
+    label: "Conversations",
+    shortLabel: "CHATS",
+    shortcut: "4",
+    index: 4,
+    icon: "💬",
+    description: "Interactive agent chats, multi-agent debates, and interview sessions",
+    plannedPrompt: 16,
+  },
+  tasks: {
+    id: "tasks",
+    label: "Task Manager",
+    shortLabel: "TASKS",
+    shortcut: "5",
+    index: 5,
+    icon: "📋",
+    description: "Task intake, step progression, approval gates, and execution timelines",
+    plannedPrompt: 16,
+  },
+  studio: {
+    id: "studio",
+    label: "Engineering Studio",
+    shortLabel: "STUDIO",
+    shortcut: "6",
+    index: 6,
+    icon: "⚡",
+    description: "Safe code workflows, diff reviews, patches, and verification sandboxes",
+    plannedPrompt: 17,
+  },
+  memory: {
+    id: "memory",
+    label: "Project Memory",
+    shortLabel: "MEMORY",
+    shortcut: "7",
+    index: 7,
+    icon: "🧠",
+    description: "Durable decisions, rationale, knowledge graph, and conflict detection",
+    plannedPrompt: 11,
+  },
+  reports: {
+    id: "reports",
+    label: "Reports & Evidence",
+    shortLabel: "REPORTS",
+    shortcut: "8",
+    index: 8,
+    icon: "📊",
+    description: "Traceable findings, preserved disagreements, and simulated research",
+    plannedPrompt: 18,
+  },
+  analytics: {
+    id: "analytics",
+    label: "Analytics & Budget",
+    shortLabel: "METRICS",
+    shortcut: "9",
+    index: 9,
+    icon: "📈",
+    description: "Token meter, spend approximations, latency metrics, and audit logs",
+    plannedPrompt: 12,
+  },
+  settings: {
+    id: "settings",
+    label: "Settings",
+    shortLabel: "CONFIG",
+    shortcut: "0",
+    index: 10,
+    icon: "⚙",
+    description: "Provider API keys, models, fallback routing, and safety permissions",
+    plannedPrompt: 4,
+  },
+};
+
 

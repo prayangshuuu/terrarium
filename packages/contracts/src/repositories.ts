@@ -23,6 +23,13 @@ import { type MemoryCategory, type MemoryItem, type MemoryFilter } from "./memor
 import { type AgentDepartment } from "./departments.ts";
 import { type AgentProfile, type AgentProfileStatus } from "./agent.ts";
 import { type TaskPlan, type PlanStatus, type TaskType, type RiskLevel } from "./planning.ts";
+import {
+  type BudgetConfig,
+  type BudgetLedgerEntry,
+  type BudgetReservation,
+  type BudgetScope,
+  type BudgetSummary,
+} from "./budget.ts";
 
 export interface TaskQueryOptions {
   readonly status?: TaskStatus;
@@ -161,6 +168,16 @@ export interface PlanRepository {
   delete(id: string): Promise<Result<boolean, DatabaseError>>;
 }
 
+export interface BudgetRepository {
+  findConfig(scope: BudgetScope, targetId?: string): Promise<Result<BudgetConfig | null, DatabaseError>>;
+  saveConfig(config: BudgetConfig): Promise<Result<BudgetConfig, DatabaseError>>;
+  recordLedgerEntry(entry: BudgetLedgerEntry): Promise<Result<BudgetLedgerEntry, DatabaseError>>;
+  getSummary(scope: BudgetScope, targetId?: string): Promise<Result<BudgetSummary, DatabaseError>>;
+  createReservation(res: BudgetReservation): Promise<Result<BudgetReservation, DatabaseError>>;
+  updateReservation(res: BudgetReservation): Promise<Result<BudgetReservation, DatabaseError>>;
+  findActiveReservation(id: string): Promise<Result<BudgetReservation | null, DatabaseError>>;
+}
+
 /**
  * Composite container for all domain repositories with transaction support.
  */
@@ -176,5 +193,6 @@ export interface TerrariumRepositories {
   readonly memory: MemoryRepository;
   readonly agentProfiles: AgentProfileRepository;
   readonly plans: PlanRepository;
+  readonly budgets?: BudgetRepository;
   withTransaction<T>(operation: () => Promise<T>): Promise<Result<T, DatabaseError>>;
 }

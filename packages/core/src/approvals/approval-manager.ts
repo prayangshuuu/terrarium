@@ -155,6 +155,10 @@ export class ApprovalManager {
     return ok(items);
   }
 
+  async listPending(taskId?: string): Promise<Result<readonly ApprovalRequest[], DatabaseError>> {
+    return this.list({ status: "pending", taskId });
+  }
+
   async createRequest(input: CreateApprovalInput): Promise<Result<ApprovalRequest, TerrariumError>> {
     const now = new Date();
     const nowIso = now.toISOString();

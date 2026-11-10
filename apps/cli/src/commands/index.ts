@@ -14,3 +14,5 @@ export * from "./approval-commands.ts";
 export * from "./risk-communicator.ts";
 export * from "./memory-commands.ts";
 export * from "./context-commands.ts";
+export * from "./budget-commands.ts";
+export * from "./observability-commands.ts";

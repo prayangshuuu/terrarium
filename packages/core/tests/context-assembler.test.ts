@@ -40,14 +40,32 @@ describe("Context Assembler & History Summarizer Suite (A2 & A3)", () => {
     id: "prof-sec-01",
     slug: "security-auditor",
     name: "Security Compliance Auditor",
+    displayName: "Security Auditor",
     department: "security",
     role: "specialist",
     description: "Evaluates cryptographic security, tool permissions, and secrets",
-    systemPrompt: "You are a security auditor.",
-    capabilities: ["security_audit", "vulnerability_scanning"],
-    disallowedTools: [],
-    limits: { maxTokensPerTask: 10000, maxExecutionTimeSeconds: 60, maxDelegationDepth: 1 },
-    status: "active",
+    systemPromptTemplate: "You are a security auditor.",
+    capabilities: [
+      {
+        id: "cap-sec-audit",
+        name: "Security Audit",
+        description: "Audits security posture",
+        department: "security",
+        requiredPermissions: [],
+        isConsequential: false,
+      },
+    ],
+    supportedTasks: ["security_audit"],
+    constraints: {
+      maxTokensPerTurn: 10000,
+      maxDelegationDepth: 1,
+      maxChildrenTasks: 5,
+      timeoutMs: 30000,
+    },
+    limits: { maxTokensPerTurn: 10000, maxDelegationDepth: 1, maxChildrenTasks: 5 },
+    modelPreference: { tier: "standard" },
+    permissions: ["read:code"],
+    status: "available",
     version: "1.0.0",
     tags: ["security"],
     createdAt: new Date().toISOString(),
@@ -58,14 +76,32 @@ describe("Context Assembler & History Summarizer Suite (A2 & A3)", () => {
     id: "prof-dsgn-01",
     slug: "ui-designer",
     name: "Design Specialist",
+    displayName: "UI Designer",
     department: "design",
     role: "specialist",
     description: "Designs terminal and web interfaces",
-    systemPrompt: "You are a UI designer.",
-    capabilities: ["design_system", "interaction_design"],
-    disallowedTools: [],
-    limits: { maxTokensPerTask: 10000, maxExecutionTimeSeconds: 60, maxDelegationDepth: 1 },
-    status: "active",
+    systemPromptTemplate: "You are a UI designer.",
+    capabilities: [
+      {
+        id: "cap-ui-design",
+        name: "UI Design",
+        description: "Designs UI components",
+        department: "design",
+        requiredPermissions: [],
+        isConsequential: false,
+      },
+    ],
+    supportedTasks: ["ui_design"],
+    constraints: {
+      maxTokensPerTurn: 10000,
+      maxDelegationDepth: 1,
+      maxChildrenTasks: 5,
+      timeoutMs: 30000,
+    },
+    limits: { maxTokensPerTurn: 10000, maxDelegationDepth: 1, maxChildrenTasks: 5 },
+    modelPreference: { tier: "standard" },
+    permissions: ["read:code"],
+    status: "available",
     version: "1.0.0",
     tags: ["design"],
     createdAt: new Date().toISOString(),
@@ -80,7 +116,8 @@ describe("Context Assembler & History Summarizer Suite (A2 & A3)", () => {
     status: "running",
     priority: "high",
     delegationDepth: 0,
-    contextReferences: { scope: "packages/core/src/security" },
+    contextRefs: [],
+    expectedDeliverables: ["audit_report"],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -351,7 +388,9 @@ describe("Context Assembler & History Summarizer Suite (A2 & A3)", () => {
       );
 
       expect(res.success).toBe(false);
-      expect(res.error).toBeInstanceOf(ContextBudgetExceededError);
+      if (!res.success) {
+        expect(res.error).toBeInstanceOf(ContextBudgetExceededError);
+      }
     });
 
     it("strictly isolates project context: cannot assemble memories from another project", async () => {

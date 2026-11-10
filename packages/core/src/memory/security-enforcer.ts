@@ -41,7 +41,9 @@ export class MemorySecurityEnforcer {
     if (!hasWildcard && !hasExact) {
       return fail(
         new PermissionDeniedError(
-          `Permission denied: Actor '${caller.actorId}' lacks required permission '${requiredPermission}' to ${actionDescription}.`
+          actionDescription,
+          requiredPermission,
+          `Actor '${caller.actorId}' lacks required permission '${requiredPermission}'`
         )
       );
     }

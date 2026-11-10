@@ -21,6 +21,12 @@ export const EVENT_TYPES = [
   "task:completed",
   "task:failed",
   "task:cancelled",
+  "execution:queued",
+  "execution:started",
+  "execution:completed",
+  "execution:failed",
+  "execution:cancelled",
+  "execution:retrying",
   "agent:activated",
   "agent:deactivated",
   "agent:delegated",
@@ -37,8 +43,14 @@ export const EVENT_TYPES = [
   "tool:succeeded",
   "tool:failed",
   "tool:blocked",
+  "usage:recorded",
   "budget:warning",
   "budget:exceeded",
+  "budget:reserved",
+  "budget:committed",
+  "budget:released",
+  "budget:paused_approval",
+  "model:routed",
   "memory:recorded",
   "memory:updated",
   "memory:deleted",
@@ -49,7 +61,11 @@ export const EVENT_TYPES = [
   "context:assembled",
   "artifact:generated",
   "artifact:verified",
+  "artifact:rejected",
+  "artifact:published",
   "report:generated",
+  "telemetry:metric",
+  "telemetry:log",
 ] as const;
 
 export type EventType = (typeof EVENT_TYPES)[number];
@@ -64,6 +80,13 @@ export interface DomainEvent {
   readonly entityType: string;
   readonly entityId: string;
   readonly payload?: Readonly<Record<string, unknown>>;
+  readonly correlationId?: string;
+  readonly traceId?: string;
+  readonly spanId?: string;
+  readonly parentSpanId?: string;
+  readonly level?: "debug" | "info" | "warn" | "error";
+  readonly isDiagnostic?: boolean;
+  readonly durationMs?: number;
   readonly timestamp: string;
 }
 
@@ -92,6 +115,29 @@ export function validateDomainEvent(
   );
   const timestamp = collector.check(validateIsoDateTime(value.timestamp, `${path}.timestamp`));
 
+  let correlationId: string | undefined;
+  if (value.correlationId !== undefined) {
+    correlationId = collector.check(validateString(value.correlationId, `${path}.correlationId`, { minLength: 1, maxLength: 100 }));
+  }
+
+  let traceId: string | undefined;
+  if (value.traceId !== undefined) {
+    traceId = collector.check(validateString(value.traceId, `${path}.traceId`, { minLength: 1, maxLength: 100 }));
+  }
+
+  let spanId: string | undefined;
+  if (value.spanId !== undefined) {
+    spanId = collector.check(validateString(value.spanId, `${path}.spanId`, { minLength: 1, maxLength: 100 }));
+  }
+
+  let parentSpanId: string | undefined;
+  if (value.parentSpanId !== undefined) {
+    parentSpanId = collector.check(validateString(value.parentSpanId, `${path}.parentSpanId`, { minLength: 1, maxLength: 100 }));
+  }
+
+  const isDiagnostic = typeof value.isDiagnostic === "boolean" ? value.isDiagnostic : false;
+  const durationMs = typeof value.durationMs === "number" ? value.durationMs : undefined;
+
   if (
     collector.hasIssues() ||
     id === undefined ||
@@ -111,6 +157,13 @@ export function validateDomainEvent(
     entityType,
     entityId,
     payload: value.payload as Record<string, unknown> | undefined,
+    correlationId,
+    traceId,
+    spanId,
+    parentSpanId,
+    level: value.level as any,
+    isDiagnostic,
+    durationMs,
     timestamp,
   });
 }

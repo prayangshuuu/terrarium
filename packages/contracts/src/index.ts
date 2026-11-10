@@ -31,6 +31,8 @@ export * from "./context.ts";
 export * from "./providers.ts";
 export * from "./tools.ts";
 export * from "./budget.ts";
+export * from "./routing.ts";
+export * from "./telemetry.ts";
 export * from "./results.ts";
 export * from "./repositories.ts";
 

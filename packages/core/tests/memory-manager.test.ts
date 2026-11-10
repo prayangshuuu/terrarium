@@ -109,7 +109,9 @@ describe("Project Memory Manager Suite (A1 & A3)", () => {
       };
       const leakRes = await memoryManager.getMemory(recordRes.data.id, foreignCaller);
       expect(leakRes.success).toBe(false);
-      expect(leakRes.error).toBeInstanceOf(CrossProjectContextLeakError);
+      if (!leakRes.success) {
+        expect(leakRes.error).toBeInstanceOf(CrossProjectContextLeakError);
+      }
     });
 
     it("corrects an existing memory item with audit tracking", async () => {
@@ -174,7 +176,9 @@ describe("Project Memory Manager Suite (A1 & A3)", () => {
 
       const getDeleted = await memoryManager.getMemory(recordRes.data.id, defaultCaller);
       expect(getDeleted.success).toBe(false);
-      expect(getDeleted.error).toBeInstanceOf(MemoryNotFoundError);
+      if (!getDeleted.success) {
+        expect(getDeleted.error).toBeInstanceOf(MemoryNotFoundError);
+      }
     });
   });
 
@@ -241,7 +245,7 @@ describe("Project Memory Manager Suite (A1 & A3)", () => {
       // Verify original memory is flagged as conflicted with reason
       const checkOriginal = await memoryManager.getMemory(original.data.id, defaultCaller);
       expect(checkOriginal.success).toBe(true);
-      if (checkOriginal.data) {
+      if (checkOriginal.success) {
         expect(checkOriginal.data.isConflicted).toBe(true);
         expect(checkOriginal.data.conflictReason).toContain("Divergent content for key 'auth_approach'");
       }
@@ -457,7 +461,9 @@ describe("Project Memory Manager Suite (A1 & A3)", () => {
         readOnlyCaller
       );
       expect(writeRes.success).toBe(false);
-      expect(writeRes.error).toBeInstanceOf(PermissionDeniedError);
+      if (!writeRes.success) {
+        expect(writeRes.error).toBeInstanceOf(PermissionDeniedError);
+      }
     });
 
     it("strictly isolates project memories and prevents cross-project leakage", async () => {
@@ -479,7 +485,9 @@ describe("Project Memory Manager Suite (A1 & A3)", () => {
         { projectId: "project-beta", actorId: "bob", permissions: ["*"] }
       );
       expect(projBList.success).toBe(false);
-      expect(projBList.error).toBeInstanceOf(CrossProjectContextLeakError);
+      if (!projBList.success) {
+        expect(projBList.error).toBeInstanceOf(CrossProjectContextLeakError);
+      }
     });
   });
 });

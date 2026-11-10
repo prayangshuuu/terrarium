@@ -113,8 +113,12 @@ export interface NormalizedUsageMetadata {
   readonly promptTokens: number;
   readonly completionTokens: number;
   readonly totalTokens: number;
+  readonly cachedTokens?: number;
   readonly estimatedCostUsd?: number;
+  readonly isEstimate?: boolean;
 }
+
+export type TokenUsage = NormalizedUsageMetadata;
 
 export interface ModelRequestOptions {
   readonly temperature?: number;
@@ -325,12 +329,16 @@ export function validateNormalizedUsage(
   }
 
   const estimatedCostUsd = typeof value.estimatedCostUsd === "number" ? value.estimatedCostUsd : undefined;
+  const cachedTokens = typeof value.cachedTokens === "number" ? value.cachedTokens : undefined;
+  const isEstimate = typeof value.isEstimate === "boolean" ? value.isEstimate : undefined;
 
   return ok({
     promptTokens,
     completionTokens,
     totalTokens,
+    cachedTokens,
     estimatedCostUsd,
+    isEstimate,
   });
 }
 

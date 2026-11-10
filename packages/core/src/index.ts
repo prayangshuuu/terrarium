@@ -27,6 +27,9 @@ import { ApprovalManager } from "./approvals/index.ts";
 import { createToolRegistry, DefaultToolRegistry } from "./tools/index.ts";
 import { MemoryManager } from "./memory/index.ts";
 import { ContextAssembler } from "./context/index.ts";
+import { BudgetManager } from "./budget/index.ts";
+import { ModelRouter } from "./routing/index.ts";
+import { TelemetryManager } from "./observability/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
@@ -40,6 +43,9 @@ export * from "./approvals/index.ts";
 export * from "./tools/index.ts";
 export * from "./memory/index.ts";
 export * from "./context/index.ts";
+export * from "./budget/index.ts";
+export * from "./routing/index.ts";
+export * from "./observability/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -58,6 +64,9 @@ export interface CoreEngine {
   readonly approvals: ApprovalManager;
   readonly memory: MemoryManager;
   readonly context: ContextAssembler;
+  readonly budget: BudgetManager;
+  readonly router: ModelRouter;
+  readonly telemetry: TelemetryManager;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -72,6 +81,9 @@ export interface CreateCoreEngineOptions {
   readonly approvals?: ApprovalManager;
   readonly memory?: MemoryManager;
   readonly context?: ContextAssembler;
+  readonly budget?: BudgetManager;
+  readonly router?: ModelRouter;
+  readonly telemetry?: TelemetryManager;
 }
 
 /**
@@ -129,6 +141,24 @@ export function createCoreEngine(
     ? (optionsOrConfig as CreateCoreEngineOptions).context!
     : new ContextAssembler(memory);
 
+  const budget = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).budget
+    ? (optionsOrConfig as CreateCoreEngineOptions).budget!
+    : new BudgetManager({
+        repository: db?.budgets,
+        approvals,
+      });
+
+  const router = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).router
+    ? (optionsOrConfig as CreateCoreEngineOptions).router!
+    : new ModelRouter();
+
+  const telemetry = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).telemetry
+    ? (optionsOrConfig as CreateCoreEngineOptions).telemetry!
+    : new TelemetryManager({
+        eventRepository: db?.events,
+        logRepository: db?.logs,
+      });
+
   return {
     config,
     db,
@@ -140,6 +170,9 @@ export function createCoreEngine(
     approvals,
     memory,
     context,
+    budget,
+    router,
+    telemetry,
     getState(): CoreEngineState {
       return {
         status,

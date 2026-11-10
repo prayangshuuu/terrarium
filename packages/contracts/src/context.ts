@@ -206,7 +206,7 @@ export function validateAgentContextPackage(
   );
 
   if (!isRecord(value.taskContext)) {
-    collector.addIssue(`${path}.taskContext`, "Expected taskContext object", value.taskContext);
+    collector.addIssue({ path: `${path}.taskContext`, message: "Expected taskContext object", received: value.taskContext });
   }
 
   const taskBrief: ContextTaskBrief = isRecord(value.taskContext)

@@ -44,6 +44,12 @@ export type TerrariumErrorCode =
   | "STALE_MEMORY"
   | "CONTEXT_BUDGET_EXCEEDED"
   | "CROSS_PROJECT_CONTEXT_LEAK"
+  | "CONCURRENCY_LIMIT_EXCEEDED"
+  | "DURATION_LIMIT_EXCEEDED"
+  | "MODEL_ROUTING_ERROR"
+  | "RESERVATION_EXHAUSTED"
+  | "TELEMETRY_ERROR"
+  | "SECRET_LEAK_DETECTED"
   | "INTERNAL_ERROR";
 
 export interface ValidationIssue {
@@ -183,13 +189,19 @@ export class BudgetExceededError extends TerrariumError {
   readonly scope: string;
   readonly current: number;
   readonly limit: number;
-  readonly unit: "tokens" | "usd";
+  readonly unit: "tokens" | "usd" | "duration" | "concurrency";
 
-  constructor(scope: string, current: number, limit: number, unit: "tokens" | "usd") {
-    const formattedCurrent = unit === "usd" ? `$${current.toFixed(2)}` : `${current} tokens`;
-    const formattedLimit = unit === "usd" ? `$${limit.toFixed(2)}` : `${limit} tokens`;
+  constructor(
+    scope: string,
+    current: number,
+    limit: number,
+    unit: "tokens" | "usd" | "duration" | "concurrency" = "tokens",
+    customMessage?: string
+  ) {
+    const formattedCurrent = unit === "usd" ? `$${current.toFixed(2)}` : unit === "duration" ? `${current}ms` : `${current} tokens`;
+    const formattedLimit = unit === "usd" ? `$${limit.toFixed(2)}` : unit === "duration" ? `${limit}ms` : `${limit} tokens`;
     super(
-      `Budget exceeded for scope '${scope}': consumed ${formattedCurrent} of ${formattedLimit} limit`,
+      customMessage ?? `Budget exceeded for scope '${scope}': consumed ${formattedCurrent} of ${formattedLimit} limit`,
       "BUDGET_EXCEEDED",
       { scope, current, limit, unit }
     );
@@ -198,6 +210,23 @@ export class BudgetExceededError extends TerrariumError {
     this.current = current;
     this.limit = limit;
     this.unit = unit;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an attempt to reserve or allocate budget fails because limits are exhausted.
+ */
+export class BudgetExhaustedError extends BudgetExceededError {
+  constructor(scope: string, requested: number, limit: number, unit: "tokens" | "usd" = "tokens") {
+    super(
+      scope,
+      requested,
+      limit,
+      unit,
+      `Budget limit exceeded for scope '${scope}': requested ${unit === "usd" ? `$${requested.toFixed(2)}` : requested} exceeds available budget (limit: ${unit === "usd" ? `$${limit.toFixed(2)}` : limit})`
+    );
+    this.name = "BudgetExhaustedError";
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
@@ -768,6 +797,116 @@ export class CrossProjectContextLeakError extends MemoryError {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+/**
+ * Thrown when active task or agent concurrency exceeds the allocated limit.
+ */
+export class ConcurrencyLimitExceededError extends BudgetExceededError {
+  readonly activeConcurrency: number;
+  readonly maxConcurrency: number;
+
+  constructor(scope: string, activeConcurrency: number, maxConcurrency: number) {
+    super(
+      scope,
+      activeConcurrency,
+      maxConcurrency,
+      "concurrency",
+      `Concurrency limit exceeded for scope '${scope}': active ${activeConcurrency} exceeds limit of ${maxConcurrency}`
+    );
+    this.name = "ConcurrencyLimitExceededError";
+    this.activeConcurrency = activeConcurrency;
+    this.maxConcurrency = maxConcurrency;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when execution time exceeds the allocated duration budget.
+ */
+export class DurationLimitExceededError extends BudgetExceededError {
+  readonly elapsedMs: number;
+  readonly maxDurationMs: number;
+
+  constructor(scope: string, elapsedMs: number, maxDurationMs: number) {
+    super(
+      scope,
+      elapsedMs,
+      maxDurationMs,
+      "duration",
+      `Duration limit exceeded for scope '${scope}': elapsed ${elapsedMs}ms exceeds limit of ${maxDurationMs}ms`
+    );
+    this.name = "DurationLimitExceededError";
+    this.elapsedMs = elapsedMs;
+    this.maxDurationMs = maxDurationMs;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when model routing fails to identify a suitable provider or model.
+ */
+export class ModelRoutingError extends TerrariumError {
+  readonly criteria: Record<string, unknown>;
+
+  constructor(message: string, criteria: Record<string, unknown>) {
+    super(message, "MODEL_ROUTING_ERROR", { criteria });
+    this.name = "ModelRoutingError";
+    this.criteria = criteria;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when an attempt to reserve budget fails because available funds/tokens are exhausted.
+ */
+export class ReservationExhaustedError extends BudgetExceededError {
+  readonly requestedTokens: number;
+  readonly availableTokens: number;
+
+  constructor(scope: string, requestedTokens: number, availableTokens: number) {
+    super(
+      scope,
+      requestedTokens,
+      availableTokens,
+      "tokens",
+      `Budget reservation failed for scope '${scope}': requested ${requestedTokens} tokens but only ${availableTokens} remain available`
+    );
+    this.name = "ReservationExhaustedError";
+    this.requestedTokens = requestedTokens;
+    this.availableTokens = availableTokens;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when a telemetry subsystem error occurs.
+ */
+export class TelemetryError extends TerrariumError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, "TELEMETRY_ERROR", details);
+    this.name = "TelemetryError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown in strict mode when sensitive credentials, API keys, or private tokens are detected.
+ */
+export class SecretLeakDetectedError extends TerrariumError {
+  readonly secretType: string;
+
+  constructor(secretType: string, path?: string) {
+    super(
+      `Potential secret leakage detected (${secretType}) in telemetry payload${path ? ` at '${path}'` : ""}. Redaction required.`,
+      "SECRET_LEAK_DETECTED",
+      { secretType, path }
+    );
+    this.name = "SecretLeakDetectedError";
+    this.secretType = secretType;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 
 
 

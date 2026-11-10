@@ -27,6 +27,7 @@ export const APPROVAL_ACTION_TYPES = [
   "external_publish",
   "message_send",
   "destructive_operation",
+  "budget_override",
 ] as const;
 
 export type ApprovalActionType = (typeof APPROVAL_ACTION_TYPES)[number];

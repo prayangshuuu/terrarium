@@ -223,12 +223,16 @@ export function validateArray<T>(
 export class ValidationCollector {
   readonly issues: ValidationIssue[] = [];
 
-  check<T>(result: Result<T, ValidationIssue | readonly ValidationIssue[] | ValidationIssue[]>): T | undefined {
+  check<T>(
+    result: Result<T, ValidationIssue | readonly ValidationIssue[] | ValidationIssue[] | DomainValidationError>
+  ): T | undefined {
     if (result.success) {
       return result.data;
     }
     if (Array.isArray(result.error)) {
       this.issues.push(...result.error);
+    } else if ("issues" in (result.error as any) && Array.isArray((result.error as any).issues)) {
+      this.issues.push(...(result.error as any).issues);
     } else {
       this.issues.push(result.error as ValidationIssue);
     }
@@ -237,6 +241,10 @@ export class ValidationCollector {
 
   addIssue(issue: ValidationIssue): void {
     this.issues.push(issue);
+  }
+
+  addIssues(issues: readonly ValidationIssue[]): void {
+    this.issues.push(...issues);
   }
 
   hasIssues(): boolean {

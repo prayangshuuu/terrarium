@@ -21,4 +21,6 @@ export * from "./repositories/sqlite-report-repository.ts";
 export * from "./repositories/sqlite-memory-repository.ts";
 export * from "./repositories/sqlite-agent-profile-repository.ts";
 export * from "./repositories/sqlite-plan-repository.ts";
+export * from "./repositories/sqlite-budget-repository.ts";
+export * from "./repositories/sqlite-log-repository.ts";
 export * from "./sqlite-database.ts";

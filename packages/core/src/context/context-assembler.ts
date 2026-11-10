@@ -239,9 +239,9 @@ export class ContextAssembler {
       taskId: request.taskId,
       title: options?.task?.title ?? `Task ${request.taskId}`,
       description: options?.task?.description ?? "",
-      category: options?.task?.category ?? "general",
+      category: (options?.task as any)?.category ?? options?.task?.department ?? "general",
       priority: options?.task?.priority ?? "medium",
-      inputs: options?.task?.contextReferences ?? {},
+      inputs: (options?.task as any)?.contextReferences ?? options?.task?.contextRefs ?? {},
       parentTaskId: options?.task?.parentTaskId,
     };
 

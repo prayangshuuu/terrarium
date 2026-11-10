@@ -636,6 +636,7 @@ describe("SQLite Repositories Integration Suite", () => {
   describe("MemoryRepository", () => {
     const memoryItem: MemoryItem = {
       id: "mem_01",
+      projectId: "default",
       category: "decision_rationale",
       key: "storage_engine",
       content: "Chose SQLite with WAL mode over Redis/Postgres per PLAN.md Section 10.1",
