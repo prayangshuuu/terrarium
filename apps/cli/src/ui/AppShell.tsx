@@ -21,6 +21,7 @@ import { HelpModal } from "./components/HelpModal.js";
 import { ResponsiveContainer } from "./components/ResponsiveContainer.js";
 import { LoadingState, ErrorState, DisconnectedState } from "./components/ViewStates.js";
 import { OverviewView } from "./views/OverviewView.js";
+import { EcosystemView } from "./views/EcosystemView.js";
 import { PlaceholderView } from "./views/PlaceholderView.js";
 
 export interface AppShellProps {
@@ -221,6 +222,8 @@ export function AppShell({
                 <DisconnectedState engineStatus={state.engineStatus} />
               ) : state.activeWorkspace === "overview" ? (
                 <OverviewView />
+              ) : state.activeWorkspace === "ecosystem" ? (
+                <EcosystemView />
               ) : (
                 <PlaceholderView workspaceId={state.activeWorkspace} />
               )}

@@ -2,19 +2,34 @@
  * apps/cli/src/ui/state/ui-state-controller.ts
  *
  * Decoupled UI State Controller and Core Engine boundary adapter.
- * Contributed by A1 (Platform & Architecture) & A2 (Orchestration & AI Runtime).
+ * Contributed by A1 (Platform & Architecture) & A2 (Orchestration & AI Runtime),
+ * with strict metric correctness and real-state guarantees enforced by A3.
  * Strictly maintains UI/Core separation: UI observes events and calls engine commands,
  * but never mutates database rows or internal core structures directly.
  */
 
-import { WORKSPACE_AREAS, type WorkspaceId } from "@terrarium/contracts";
+import {
+  WORKSPACE_AREAS,
+  type WorkspaceId,
+  type AgentProfile,
+  type AgentDepartment,
+  type AgentLifecycleStatus,
+  type OverviewSummary,
+  type AgentEcosystemFilter,
+  type AgentSelectionRationale,
+  type OverviewExecutionItem,
+  type OverviewTaskItem,
+  type OverviewApprovalItem,
+  resolveAgentLifecycleStatus,
+} from "@terrarium/contracts";
 import type { CoreEngine } from "@terrarium/core";
-import type {
-  CommandPaletteItem,
-  FocusedRegion,
-  UiAlert,
-  UiState,
-  ViewMode,
+import {
+  type CommandPaletteItem,
+  createDefaultOverviewSummary,
+  type FocusedRegion,
+  type UiAlert,
+  type UiState,
+  type ViewMode,
 } from "./ui-state-types.js";
 
 export interface UiStateControllerOptions {
@@ -22,6 +37,8 @@ export interface UiStateControllerOptions {
   readonly initialWorkspace?: WorkspaceId;
   readonly projectName?: string;
   readonly environment?: "development" | "production" | "test";
+  readonly initialProfiles?: readonly AgentProfile[];
+  readonly initialOverviewSummary?: Partial<OverviewSummary>;
 }
 
 export class UiStateController {
@@ -34,6 +51,31 @@ export class UiStateController {
     this.engine = options.engine;
 
     const initialWorkspace = options.initialWorkspace ?? "overview";
+    const engineStatus = this.engine ? "ready" : "disconnected";
+
+    const initialProfiles = options.initialProfiles ?? [];
+    const baseOverview = createDefaultOverviewSummary(engineStatus);
+
+    // Seed department counts and simulated count from initialProfiles if provided
+    const deptCounts: Record<string, number> = {};
+    let simulatedCount = 0;
+    for (const p of initialProfiles) {
+      deptCounts[p.department] = (deptCounts[p.department] ?? 0) + 1;
+      if (p.department === "customer_intelligence" || p.personaAttributes) {
+        simulatedCount++;
+      }
+    }
+
+    const initialOverview: OverviewSummary = {
+      ...baseOverview,
+      departmentCounts: deptCounts,
+      simulatedPersonaCount: simulatedCount,
+      ...(options.initialOverviewSummary ?? {}),
+      registeredProfileCount:
+        options.initialOverviewSummary?.registeredProfileCount ??
+        (initialProfiles.length > 0 ? initialProfiles.length : baseOverview.registeredProfileCount),
+    };
+
     this.state = {
       activeWorkspace: initialWorkspace,
       history: [initialWorkspace],
@@ -46,19 +88,37 @@ export class UiStateController {
       alert: undefined,
       paletteQuery: "",
       selectedPaletteIndex: 0,
-      engineStatus: this.engine ? "ready" : "disconnected",
-      activeAgentCount: 0,
-      registeredAgentCount: 0,
-      activeTaskCount: 0,
-      totalTokensUsed: 0,
-      totalSpendUsd: 0.0,
-      maxSpendUsd: 10.0,
+      engineStatus,
+      activeAgentCount: initialOverview.activeExecutionCount,
+      registeredAgentCount: initialOverview.registeredProfileCount,
+      activeTaskCount: initialOverview.activeTaskCount,
+      totalTokensUsed: initialOverview.totalTokensUsed,
+      totalSpendUsd: initialOverview.totalSpendUsd,
+      maxSpendUsd: initialOverview.maxSpendUsd ?? 10.0,
       projectName: options.projectName ?? "terrarium-workspace",
       environment: options.environment ?? "development",
+
+      // Prompt 15 Real-State Additions
+      overviewSummary: initialOverview,
+      ecosystemProfiles: initialProfiles,
+      ecosystemFilter: {
+        searchQuery: "",
+        department: "all",
+        lifecycleStatus: "all",
+      },
+      selectedAgentIndex: 0,
+      selectedAgentId: initialProfiles[0]?.id ?? null,
+      isAgentDetailOpen: false,
+      selectionRationales: {},
+      activeExecutions: initialOverview.recentExecutions ?? [],
+      selectedAgentIds: [],
+      pausedAgentIds: [],
     };
 
     if (this.engine) {
       this.bindEngineEvents();
+      void this.refreshOverview();
+      void this.loadEcosystem();
     }
   }
 
@@ -98,11 +158,12 @@ export class UiStateController {
     }
 
     if (this.state.activeWorkspace === workspace) {
-      // Already on this workspace; ensure palette/help are closed
-      if (this.state.isCommandPaletteOpen || this.state.isHelpModalOpen) {
+      // Already on this workspace; ensure palette/help/agent detail are closed
+      if (this.state.isCommandPaletteOpen || this.state.isHelpModalOpen || this.state.isAgentDetailOpen) {
         this.setState({
           isCommandPaletteOpen: false,
           isHelpModalOpen: false,
+          isAgentDetailOpen: false,
           focusedRegion: "content",
         });
       }
@@ -118,6 +179,7 @@ export class UiStateController {
       history: nextHistory,
       isCommandPaletteOpen: false,
       isHelpModalOpen: false,
+      isAgentDetailOpen: false,
       focusedRegion: "content",
       paletteQuery: "",
       selectedPaletteIndex: 0,
@@ -125,10 +187,15 @@ export class UiStateController {
   }
 
   /**
-   * Navigates back in history, or dismisses an open overlay (palette or help).
+   * Navigates back in history, or dismisses an open overlay (detail modal, palette, or help).
    * Returns true if a back action occurred, false if history is at root.
    */
   public goBack(): boolean {
+    if (this.state.isAgentDetailOpen) {
+      this.closeAgentDetail();
+      return true;
+    }
+
     if (this.state.isCommandPaletteOpen) {
       this.closeCommandPalette();
       return true;
@@ -251,6 +318,372 @@ export class UiStateController {
     this.setState({ viewMode: mode, errorMessage });
   }
 
+  // =========================================================================
+  // Ecosystem Directory & Detail Inspection (Prompt 15)
+  // =========================================================================
+
+  public setEcosystemSearch(query: string): void {
+    this.setState({
+      ecosystemFilter: { ...this.state.ecosystemFilter, searchQuery: query },
+      selectedAgentIndex: 0,
+    });
+  }
+
+  public setEcosystemDepartmentFilter(department: AgentDepartment | "all"): void {
+    this.setState({
+      ecosystemFilter: { ...this.state.ecosystemFilter, department },
+      selectedAgentIndex: 0,
+    });
+  }
+
+  public setEcosystemLifecycleFilter(lifecycleStatus: AgentLifecycleStatus | "all"): void {
+    this.setState({
+      ecosystemFilter: { ...this.state.ecosystemFilter, lifecycleStatus },
+      selectedAgentIndex: 0,
+    });
+  }
+
+  public resetEcosystemFilters(): void {
+    this.setState({
+      ecosystemFilter: {
+        searchQuery: "",
+        department: "all",
+        lifecycleStatus: "all",
+      },
+      selectedAgentIndex: 0,
+    });
+  }
+
+  public setEcosystemIndex(index: number): void {
+    const filtered = this.getFilteredEcosystemProfiles();
+    if (filtered.length === 0) {
+      this.setState({ selectedAgentIndex: 0, selectedAgentId: null });
+      return;
+    }
+    const safeIdx = Math.max(0, Math.min(filtered.length - 1, index));
+    const target = filtered[safeIdx];
+    this.setState({
+      selectedAgentIndex: safeIdx,
+      selectedAgentId: target ? target.id : null,
+    });
+  }
+
+  public openAgentDetail(agentId?: string): void {
+    const id = agentId ?? this.state.selectedAgentId;
+    if (id) {
+      const filtered = this.getFilteredEcosystemProfiles();
+      const idx = filtered.findIndex((p) => p.id === id);
+      this.setState({
+        selectedAgentId: id,
+        selectedAgentIndex: idx >= 0 ? idx : this.state.selectedAgentIndex,
+        isAgentDetailOpen: true,
+      });
+    }
+  }
+
+  public closeAgentDetail(): void {
+    this.setState({ isAgentDetailOpen: false });
+  }
+
+  /**
+   * Records a demand-based candidate selection rationale for an agent.
+   */
+  public recordSelectionRationale(rationale: AgentSelectionRationale): void {
+    const nextRationales = {
+      ...this.state.selectionRationales,
+      [rationale.profileId]: rationale,
+    };
+    const nextSelectedIds = this.state.selectedAgentIds.includes(rationale.profileId)
+      ? this.state.selectedAgentIds
+      : [...this.state.selectedAgentIds, rationale.profileId];
+
+    this.setState({
+      selectionRationales: nextRationales,
+      selectedAgentIds: nextSelectedIds,
+    });
+  }
+
+  /**
+   * Computes the operational lifecycle status for an agent profile.
+   */
+  public getAgentLifecycleStatus(profile: AgentProfile): AgentLifecycleStatus {
+    const isExecuting = this.state.activeExecutions.some(
+      (e) => (e.agentProfileId === profile.id || e.agentSlug === profile.slug) && e.status === "running"
+    );
+    const isPaused = this.state.pausedAgentIds.includes(profile.id);
+    const isSelected = this.state.selectedAgentIds.includes(profile.id);
+
+    return resolveAgentLifecycleStatus(profile, { isExecuting, isPaused, isSelected });
+  }
+
+  /**
+   * Filters ecosystem profiles by current search query, department, and lifecycle status.
+   */
+  public getFilteredEcosystemProfiles(): readonly AgentProfile[] {
+    const { searchQuery, department, lifecycleStatus } = this.state.ecosystemFilter;
+    const q = searchQuery.trim().toLowerCase();
+
+    return this.state.ecosystemProfiles.filter((profile) => {
+      // 1. Department filter
+      if (department !== "all" && profile.department !== department) {
+        return false;
+      }
+
+      // 2. Lifecycle status filter
+      if (lifecycleStatus !== "all") {
+        const status = this.getAgentLifecycleStatus(profile);
+        if (status !== lifecycleStatus) {
+          return false;
+        }
+      }
+
+      // 3. Search query
+      if (q) {
+        const matchesName = profile.name.toLowerCase().includes(q);
+        const matchesRole = profile.role.toLowerCase().includes(q);
+        const matchesSlug = profile.slug.toLowerCase().includes(q);
+        const matchesDept = profile.department.toLowerCase().includes(q);
+        const matchesDesc = profile.description.toLowerCase().includes(q);
+        const matchesTag = profile.tags.some((t) => t.toLowerCase().includes(q));
+        const matchesCap = profile.capabilities.some(
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            c.description.toLowerCase().includes(q) ||
+            (c.keywords && c.keywords.some((k) => k.toLowerCase().includes(q)))
+        );
+
+        if (!matchesName && !matchesRole && !matchesSlug && !matchesDept && !matchesDesc && !matchesTag && !matchesCap) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  /**
+   * Asynchronously loads profiles from engine registry or database into the ecosystem state.
+   */
+  public async loadEcosystem(): Promise<void> {
+    if (!this.engine) return;
+
+    try {
+      let profiles: readonly AgentProfile[] = [];
+
+      if (this.engine.db) {
+        const res = await this.engine.db.agentProfiles.list();
+        if (res.success && Array.isArray(res.data)) {
+          profiles = res.data;
+        }
+      }
+
+      if (profiles.length === 0 && this.engine.registry) {
+        const res = await this.engine.registry.list();
+        if (res.success && Array.isArray(res.data)) {
+          profiles = res.data;
+        }
+      }
+
+      this.setState({
+        ecosystemProfiles: profiles,
+        selectedAgentId: profiles[this.state.selectedAgentIndex]?.id ?? null,
+      });
+    } catch (err) {
+      console.warn("Failed to load ecosystem profiles:", err);
+    }
+  }
+
+  /**
+   * Fetches real state from CoreEngine components to populate OverviewSummary (A2 & A3).
+   * Guaranteed: NO fabricated or invented metrics.
+   */
+  public async refreshOverview(): Promise<void> {
+    if (!this.engine) {
+      this.setState({
+        overviewSummary: createDefaultOverviewSummary("disconnected"),
+      });
+      return;
+    }
+
+    try {
+      const db = this.engine.db;
+      let registeredCount = 0;
+      let profiles: readonly AgentProfile[] = [];
+      const deptCounts: Record<string, number> = {};
+      let simulatedCount = 0;
+
+      // 1. Registered Profiles
+      if (db) {
+        const profRes = await db.agentProfiles.list();
+        if (profRes.success && Array.isArray(profRes.data)) {
+          profiles = profRes.data;
+          registeredCount = profiles.length;
+        }
+      } else if (this.engine.registry) {
+        const profRes = await this.engine.registry.list();
+        if (profRes.success && Array.isArray(profRes.data)) {
+          profiles = profRes.data;
+          registeredCount = profiles.length;
+        }
+      }
+
+      for (const p of profiles) {
+        deptCounts[p.department] = (deptCounts[p.department] ?? 0) + 1;
+        if (p.department === "customer_intelligence" || p.personaAttributes) {
+          simulatedCount++;
+        }
+      }
+
+      // 2. Tasks
+      let queuedTasks = 0;
+      let runningTasks = 0;
+      let completedTasks = 0;
+      let failedTasks = 0;
+      const recentTasks: OverviewTaskItem[] = [];
+
+      if (db) {
+        const tasksRes = await db.tasks.list();
+        if (tasksRes.success && Array.isArray(tasksRes.data)) {
+          for (const t of tasksRes.data) {
+            if (t.status === "queued") queuedTasks++;
+            else if (t.status === "running") runningTasks++;
+            else if (t.status === "completed") completedTasks++;
+            else if (t.status === "failed") failedTasks++;
+          }
+
+          // Latest 5 tasks
+          const sorted = [...tasksRes.data].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          for (const t of sorted.slice(0, 5)) {
+            recentTasks.push({
+              id: t.id,
+              title: t.title,
+              status: t.status,
+              priority: t.priority ?? "standard",
+              createdAt: t.createdAt,
+            });
+          }
+        }
+      }
+
+      // 3. Executions
+      let activeExecutionsCount = 0;
+      const recentExecutions: OverviewExecutionItem[] = [];
+
+      if (db && typeof db.executions.list === "function") {
+        const execRes = await db.executions.list();
+        if (execRes.success && Array.isArray(execRes.data)) {
+          for (const e of execRes.data) {
+            if (e.status === "running") {
+              activeExecutionsCount++;
+            }
+          }
+
+          const runningOrQueued = execRes.data.filter(
+            (e) => e.status === "running" || e.status === "queued"
+          );
+          for (const e of runningOrQueued.slice(0, 5)) {
+            const agent = profiles.find((p) => p.id === e.agentProfileId);
+            recentExecutions.push({
+              id: e.id,
+              taskId: e.taskId,
+              agentProfileId: e.agentProfileId,
+              agentSlug: agent ? agent.slug : e.agentProfileId,
+              status: e.status,
+              provider: e.provider,
+              model: e.model,
+              startedAt: e.startedAt,
+            });
+          }
+        }
+      }
+
+      // 4. Approvals
+      let pendingApprovalsCount = 0;
+      const pendingApprovals: OverviewApprovalItem[] = [];
+
+      if (db) {
+        const appRes = await db.approvals.list();
+        if (appRes.success && Array.isArray(appRes.data)) {
+          const pending = appRes.data.filter((a) => a.status === "pending");
+          pendingApprovalsCount = pending.length;
+          for (const a of pending.slice(0, 5)) {
+            pendingApprovals.push({
+              id: a.id,
+              taskId: a.taskId,
+              toolName: a.toolName,
+              riskLevel: a.riskLevel,
+              requestedAt: a.requestedAt,
+              consequenceSummary: a.justification,
+            });
+          }
+        }
+      }
+
+      // 5. Budget & Tokens
+      let totalSpendUsd = 0.0;
+      let totalTokensUsed = 0;
+      let maxSpendUsd = 10.0;
+
+      if (this.engine.budget) {
+        const checkRes = await this.engine.budget.checkBudget("project", "default");
+        if (checkRes.success && checkRes.data) {
+          totalSpendUsd = checkRes.data.usedSpendUsd;
+          totalTokensUsed = checkRes.data.usedTokens;
+          if (checkRes.data.allocatedSpendUsd) {
+            maxSpendUsd = checkRes.data.allocatedSpendUsd;
+          }
+        }
+      }
+
+      const activeTaskCount = queuedTasks + runningTasks;
+      const now = new Date().toISOString();
+
+      const summary: OverviewSummary = {
+        engineStatus: activeExecutionsCount > 0 ? "running" : "ready",
+        lastUpdatedAt: now,
+        isFresh: true,
+        registeredProfileCount: registeredCount,
+        activeExecutionCount: activeExecutionsCount,
+        activeTaskCount,
+        queuedTaskCount: queuedTasks,
+        runningTaskCount: runningTasks,
+        completedTaskCount: completedTasks,
+        failedTaskCount: failedTasks,
+        pendingApprovalCount: pendingApprovalsCount,
+        totalSpendUsd,
+        maxSpendUsd,
+        totalTokensUsed,
+        departmentCounts: deptCounts,
+        simulatedPersonaCount: simulatedCount,
+        recentExecutions,
+        recentTasks,
+        pendingApprovals,
+      };
+
+      this.setState({
+        overviewSummary: summary,
+        registeredAgentCount: registeredCount,
+        activeAgentCount: activeExecutionsCount,
+        activeTaskCount,
+        totalSpendUsd,
+        totalTokensUsed,
+        maxSpendUsd,
+        activeExecutions: recentExecutions,
+        engineStatus: summary.engineStatus,
+      });
+    } catch (err) {
+      console.warn("Failed to refresh overview metrics:", err);
+      this.setState({
+        overviewSummary: {
+          ...this.state.overviewSummary,
+          isFresh: false,
+        },
+      });
+    }
+  }
+
   /**
    * Returns standard command palette actions.
    */
@@ -265,6 +698,38 @@ export class UiStateController {
         category: "navigation" as const,
         action: () => this.navigate(area.id),
       })),
+      // Prompt 15: Ecosystem & Overview Specific Quick Actions
+      {
+        id: "action-refresh-overview",
+        title: "Refresh Overview Metrics",
+        subtitle: "Re-query database and engine runtime for real-state pulse",
+        shortcut: "[r]",
+        category: "action",
+        action: () => {
+          void this.refreshOverview();
+          void this.loadEcosystem();
+        },
+      },
+      {
+        id: "action-filter-engineering",
+        title: "Filter Agents: Engineering",
+        subtitle: "View engineering specialists and software architects",
+        category: "action",
+        action: () => {
+          this.navigate("ecosystem");
+          this.setEcosystemDepartmentFilter("engineering");
+        },
+      },
+      {
+        id: "action-filter-simulated-personas",
+        title: "Filter Agents: Simulated Customer Personas",
+        subtitle: "View simulated customer personas with demographic attributes",
+        category: "action",
+        action: () => {
+          this.navigate("ecosystem");
+          this.setEcosystemDepartmentFilter("customer_intelligence");
+        },
+      },
       // View / UI toggles
       {
         id: "view-toggle-sidebar",
@@ -311,24 +776,6 @@ export class UiStateController {
     if (!this.engine) return;
 
     try {
-      const db = this.engine.db;
-      if (db) {
-        // Seed initial agent count
-        db.agentProfiles.list().then((res: any) => {
-          if (res && res.success && Array.isArray(res.data)) {
-            this.setState({ registeredAgentCount: res.data.length });
-          }
-        }).catch(() => {});
-
-        // Seed initial task count
-        db.tasks.list().then((res: any) => {
-          if (res && res.success && Array.isArray(res.data)) {
-            const active = res.data.filter((t: any) => t.status === "running" || t.status === "queued");
-            this.setState({ activeTaskCount: active.length });
-          }
-        }).catch(() => {});
-      }
-
       // Event listener for real-time domain events via telemetry
       if (this.engine.telemetry && typeof this.engine.telemetry.subscribeEvents === "function") {
         const sub = this.engine.telemetry.subscribeEvents((event: any) => {
@@ -337,26 +784,14 @@ export class UiStateController {
           switch (event.eventType) {
             case "task:started":
             case "task:created":
-              this.setState({ activeTaskCount: this.state.activeTaskCount + 1 });
-              break;
             case "task:completed":
             case "task:failed":
             case "task:cancelled":
-              this.setState({ activeTaskCount: Math.max(0, this.state.activeTaskCount - 1) });
-              break;
             case "execution:started":
-              this.setState({
-                activeAgentCount: this.state.activeAgentCount + 1,
-                engineStatus: "running",
-              });
-              break;
             case "execution:completed":
             case "execution:failed":
             case "execution:cancelled":
-              this.setState({
-                activeAgentCount: Math.max(0, this.state.activeAgentCount - 1),
-                engineStatus: "ready",
-              });
+              void this.refreshOverview();
               break;
             case "usage:recorded":
               if (event.payload?.usage?.totalTokens) {
@@ -368,9 +803,11 @@ export class UiStateController {
               break;
             case "budget:exceeded":
               this.setAlert(`Budget limit reached for ${event.payload?.scope ?? "task"}`, "warning");
+              void this.refreshOverview();
               break;
             case "approval:requested":
               this.setAlert(`Consequential action requires human approval`, "warning");
+              void this.refreshOverview();
               break;
           }
         });

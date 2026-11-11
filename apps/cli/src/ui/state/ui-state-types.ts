@@ -5,9 +5,29 @@
  * Contributed by A1 (Platform & Architecture) & A2 (Orchestration & AI Runtime).
  */
 
-import { type WorkspaceId, WORKSPACE_AREAS } from "@terrarium/contracts";
+import {
+  type WorkspaceId,
+  WORKSPACE_AREAS,
+  type AgentProfile,
+  type AgentDepartment,
+  type AgentLifecycleStatus,
+  type OverviewSummary,
+  type AgentEcosystemFilter,
+  type AgentSelectionRationale,
+  type OverviewExecutionItem,
+} from "@terrarium/contracts";
 
-export { type WorkspaceId, WORKSPACE_AREAS };
+export {
+  type WorkspaceId,
+  WORKSPACE_AREAS,
+  type AgentProfile,
+  type AgentDepartment,
+  type AgentLifecycleStatus,
+  type OverviewSummary,
+  type AgentEcosystemFilter,
+  type AgentSelectionRationale,
+  type OverviewExecutionItem,
+};
 
 export type FocusedRegion = "nav" | "content" | "palette" | "help";
 
@@ -27,6 +47,36 @@ export interface CommandPaletteItem {
   readonly shortcut?: string;
   readonly category: "navigation" | "action" | "view" | "system";
   readonly action: () => void;
+}
+
+/**
+ * Creates an empty default OverviewSummary with zero fabricated metrics (A3).
+ */
+export function createDefaultOverviewSummary(
+  engineStatus: "ready" | "running" | "paused" | "error" | "disconnected" = "disconnected",
+  now = new Date().toISOString()
+): OverviewSummary {
+  return {
+    engineStatus,
+    lastUpdatedAt: now,
+    isFresh: false,
+    registeredProfileCount: 0,
+    activeExecutionCount: 0,
+    activeTaskCount: 0,
+    queuedTaskCount: 0,
+    runningTaskCount: 0,
+    completedTaskCount: 0,
+    failedTaskCount: 0,
+    pendingApprovalCount: 0,
+    totalSpendUsd: 0.0,
+    maxSpendUsd: 10.0,
+    totalTokensUsed: 0,
+    departmentCounts: {},
+    simulatedPersonaCount: 0,
+    recentExecutions: [],
+    recentTasks: [],
+    pendingApprovals: [],
+  };
 }
 
 export interface UiState {
@@ -52,4 +102,18 @@ export interface UiState {
   readonly maxSpendUsd?: number;
   readonly projectName: string;
   readonly environment: "development" | "production" | "test";
+
+  // Prompt 15: Real-state Overview summary
+  readonly overviewSummary: OverviewSummary;
+
+  // Prompt 15: Agent Ecosystem Directory & Detail inspection
+  readonly ecosystemProfiles: readonly AgentProfile[];
+  readonly ecosystemFilter: AgentEcosystemFilter;
+  readonly selectedAgentIndex: number;
+  readonly selectedAgentId: string | null;
+  readonly isAgentDetailOpen: boolean;
+  readonly selectionRationales: Readonly<Record<string, AgentSelectionRationale>>;
+  readonly activeExecutions: readonly OverviewExecutionItem[];
+  readonly selectedAgentIds: readonly string[];
+  readonly pausedAgentIds: readonly string[];
 }

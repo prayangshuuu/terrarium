@@ -58,6 +58,7 @@ export interface StepRepository {
 
 export interface ExecutionRepository {
   findById(id: string): Promise<Result<Execution | null, DatabaseError>>;
+  list?(limit?: number, offset?: number): Promise<Result<readonly Execution[], DatabaseError>>;
   listByTaskId(taskId: string): Promise<Result<readonly Execution[], DatabaseError>>;
   create(execution: Execution): Promise<Result<Execution, DuplicateEntityError | DatabaseError>>;
   update(execution: Execution): Promise<Result<Execution, NotFoundError | DatabaseError>>;

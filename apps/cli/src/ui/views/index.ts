@@ -6,3 +6,4 @@
 
 export * from "./PlaceholderView.js";
 export * from "./OverviewView.js";
+export * from "./EcosystemView.js";

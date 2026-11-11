@@ -11,6 +11,7 @@ import { type ExecutionStatus } from "./execution.ts";
 import { type ApprovalStatus } from "./approvals.ts";
 import { type AgentDepartment } from "./departments.ts";
 import { type ToolRiskLevel } from "./tools.ts";
+import { type AgentLifecycleStatus } from "./agent.ts";
 import {
   type MemoryCategory,
   type MemoryConfidence,
@@ -597,5 +598,144 @@ export const WORKSPACE_AREAS: Readonly<Record<WorkspaceId, WorkspaceMetadata>> =
     plannedPrompt: 4,
   },
 };
+
+/**
+ * Standard UI status indicators for AgentLifecycleStatus (A1, A4 & A5).
+ * Distinguishes registered, enabled, selected, executing, paused, and disabled.
+ * Aligns with PLAN.md Section 4.1 and PROMPT 15.
+ */
+export const AGENT_LIFECYCLE_UI: Readonly<Record<AgentLifecycleStatus, StatusUIMetadata>> = {
+  registered: {
+    label: "Registered",
+    shortLabel: "REG",
+    glyph: "○",
+    color: "gray",
+    description: "Catalog identity registered in virtual organization",
+  },
+  enabled: {
+    label: "Enabled",
+    shortLabel: "ENB",
+    glyph: "●",
+    color: "cyan",
+    description: "Active and available for demand-based selection",
+  },
+  selected: {
+    label: "Selected",
+    shortLabel: "SEL",
+    glyph: "◉",
+    color: "yellow",
+    description: "Chosen by orchestrator to satisfy an upcoming task plan step",
+  },
+  executing: {
+    label: "Executing",
+    shortLabel: "RUN",
+    glyph: "▶",
+    color: "green",
+    description: "Actively running an execution instance with model generation",
+  },
+  paused: {
+    label: "Paused",
+    shortLabel: "PAUS",
+    glyph: "⏸",
+    color: "yellow",
+    description: "Temporarily held awaiting human approval, input, or resume",
+  },
+  disabled: {
+    label: "Disabled",
+    shortLabel: "OFF",
+    glyph: "⊘",
+    color: "dim",
+    description: "Deactivated or deprecated; excluded from candidate matching",
+  },
+};
+
+/**
+ * Overview active execution item contract.
+ */
+export interface OverviewExecutionItem {
+  readonly id: string;
+  readonly taskId: string;
+  readonly agentProfileId: string;
+  readonly agentSlug: string;
+  readonly status: ExecutionStatus;
+  readonly provider: string;
+  readonly model: string;
+  readonly startedAt?: string;
+}
+
+/**
+ * Overview task summary item contract.
+ */
+export interface OverviewTaskItem {
+  readonly id: string;
+  readonly title: string;
+  readonly status: TaskStatus;
+  readonly priority: string;
+  readonly createdAt: string;
+}
+
+/**
+ * Overview pending approval item contract.
+ */
+export interface OverviewApprovalItem {
+  readonly id: string;
+  readonly taskId: string;
+  readonly toolName: string;
+  readonly riskLevel: ToolRiskLevel;
+  readonly requestedAt: string;
+  readonly consequenceSummary?: string;
+}
+
+/**
+ * Real-state Overview dashboard summary contract (Prompt 15).
+ * Strictly forbids fabricated numbers or placeholders.
+ */
+export interface OverviewSummary {
+  readonly engineStatus: "ready" | "running" | "paused" | "error" | "disconnected";
+  readonly lastUpdatedAt: string;
+  readonly isFresh: boolean;
+  readonly registeredProfileCount: number;
+  readonly activeExecutionCount: number;
+  readonly activeTaskCount: number;
+  readonly queuedTaskCount: number;
+  readonly runningTaskCount: number;
+  readonly completedTaskCount: number;
+  readonly failedTaskCount: number;
+  readonly pendingApprovalCount: number;
+  readonly totalSpendUsd: number;
+  readonly maxSpendUsd?: number;
+  readonly totalTokensUsed: number;
+  readonly departmentCounts: Readonly<Record<string, number>>;
+  readonly simulatedPersonaCount: number;
+  readonly recentExecutions: readonly OverviewExecutionItem[];
+  readonly recentTasks: readonly OverviewTaskItem[];
+  readonly pendingApprovals: readonly OverviewApprovalItem[];
+}
+
+/**
+ * Selection rationale recorded during demand-based candidate selection.
+ */
+export interface AgentSelectionRationale {
+  readonly profileId: string;
+  readonly profileSlug: string;
+  readonly taskId: string;
+  readonly stepId?: string;
+  readonly rationale: string;
+  readonly score: number;
+  readonly matchedCapabilities: readonly string[];
+  readonly matchedTasks: readonly string[];
+  readonly reasons: readonly string[];
+  readonly recordedAt: string;
+}
+
+/**
+ * Filter criteria for the Agent Ecosystem view.
+ */
+export interface AgentEcosystemFilter {
+  readonly searchQuery: string;
+  readonly department: AgentDepartment | "all";
+  readonly lifecycleStatus: AgentLifecycleStatus | "all";
+}
+
 
 

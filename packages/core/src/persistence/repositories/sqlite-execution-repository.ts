@@ -76,6 +76,17 @@ export class SqliteExecutionRepository implements ExecutionRepository {
     }
   }
 
+  async list(limit = 100, offset = 0): Promise<Result<readonly Execution[], DatabaseError>> {
+    try {
+      const rows = this.db
+        .query("SELECT * FROM executions ORDER BY created_at DESC LIMIT ? OFFSET ?;")
+        .all(limit, offset) as ExecutionRow[];
+      return ok(rows.map(rowToExecution));
+    } catch (err: unknown) {
+      return fail(handleSqliteError(err, "Execution", "list"));
+    }
+  }
+
   async listByTaskId(taskId: string): Promise<Result<readonly Execution[], DatabaseError>> {
     try {
       const rows = this.db

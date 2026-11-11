@@ -22,6 +22,54 @@ import {
 export type AgentProfileStatus = "available" | "busy" | "disabled" | "deprecated";
 export const AGENT_PROFILE_STATUSES = ["available", "busy", "disabled", "deprecated"] as const;
 
+/**
+ * Agent lifecycle status in the virtual organization runtime.
+ * Distinguishes stored catalog status from dynamic execution & orchestration state.
+ * Aligns with PLAN.md Section 4.1 and PROMPT 15.
+ */
+export const AGENT_LIFECYCLE_STATUSES = [
+  "registered",
+  "enabled",
+  "selected",
+  "executing",
+  "paused",
+  "disabled",
+] as const;
+
+export type AgentLifecycleStatus = (typeof AGENT_LIFECYCLE_STATUSES)[number];
+
+export interface AgentLifecycleRuntimeOptions {
+  readonly isExecuting?: boolean;
+  readonly isSelected?: boolean;
+  readonly isPaused?: boolean;
+}
+
+/**
+ * Resolves the operational lifecycle status of an agent profile given its catalog
+ * status and current runtime execution/selection context.
+ */
+export function resolveAgentLifecycleStatus(
+  profile: Pick<AgentProfile, "status">,
+  runtime?: AgentLifecycleRuntimeOptions
+): AgentLifecycleStatus {
+  if (runtime?.isExecuting) {
+    return "executing";
+  }
+  if (runtime?.isPaused) {
+    return "paused";
+  }
+  if (runtime?.isSelected) {
+    return "selected";
+  }
+  if (profile.status === "disabled" || profile.status === "deprecated") {
+    return "disabled";
+  }
+  if (profile.status === "available") {
+    return "enabled";
+  }
+  return "registered";
+}
+
 export type ModelTier = "fast" | "standard" | "advanced";
 export const MODEL_TIERS = ["fast", "standard", "advanced"] as const;
 
