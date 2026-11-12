@@ -19,10 +19,13 @@ export function formatProfileCard(profile: AgentProfile): string {
   const statusBadge = profile.status === "available" ? "[AVAILABLE]" : `[${profile.status.toUpperCase()}]`;
   const personaBadge = profile.personaAttributes ? " (Simulated Persona)" : "";
 
+  const title = ` ${profile.displayName}${personaBadge}`;
+  const meta = ` Status: ${statusBadge}   Version: v${profile.version}   Dept: ${profile.department}`;
+
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ ${profile.displayName}${personaBadge}`);
-  lines.push(`│ Status: ${statusBadge}   Version: v${profile.version}   Dept: ${profile.department}`);
-  lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
+  lines.push(`│${title.padEnd(77)}│`);
+  lines.push(`│${meta.padEnd(77)}│`);
+  lines.push(`└─────────────────────────────────────────────────────────────────────────────┘`);
   lines.push(`  ID:          ${profile.id}`);
   lines.push(`  Slug:        ${profile.slug}`);
   lines.push(`  Role:        ${profile.role}`);
@@ -76,7 +79,6 @@ export function formatProfileCard(profile: AgentProfile): string {
 
   lines.push(`  Permissions (${profile.permissions.length}):`);
   lines.push(`    ${profile.permissions.length > 0 ? profile.permissions.join(", ") : "(read-only baseline)"}`);
-  lines.push(`└─────────────────────────────────────────────────────────────────────────────┘`);
 
   return lines.join("\n");
 }

@@ -30,6 +30,16 @@ export function OverviewView() {
 
   const isCleanInstall = summary.registeredProfileCount === 0;
 
+  // Precision budget calculation
+  const spendPct =
+    summary.maxSpendUsd && summary.maxSpendUsd > 0
+      ? Math.min(100, Math.round((summary.totalSpendUsd / summary.maxSpendUsd) * 100))
+      : 0;
+  const spendBlocks = Math.floor(spendPct / 10);
+  const spendGauge = summary.maxSpendUsd
+    ? `[${"█".repeat(spendBlocks)}${"-".repeat(10 - spendBlocks)}] ${spendPct}% cap`
+    : "";
+
   return (
     <box flexDirection="column" paddingX={2} paddingY={1} flexGrow={1}>
       {/* 1. Header Banner: Title, Freshness, and Engine Status */}
@@ -60,7 +70,7 @@ export function OverviewView() {
             : summary.engineStatus === "ready"
             ? "● READY"
             : summary.engineStatus === "paused"
-            ? "⏸ PAUSED"
+            ? "|| PAUSED"
             : "○ DISCONNECTED"}
         </text>
       </box>
@@ -291,9 +301,14 @@ export function OverviewView() {
       >
         {summary.recentExecutions.length > 0 ? (
           <box flexDirection="column">
-            <text fg={THEME_COLORS.fgSecondary} attributes={TextAttributes.BOLD}>
-              Active Model Executions:
-            </text>
+            <box flexDirection="row" justifyContent="space-between" marginBottom={0}>
+              <text fg={THEME_COLORS.fgSecondary} attributes={TextAttributes.BOLD}>
+                Active Model Executions:
+              </text>
+              <text fg={THEME_COLORS.fgDim} attributes={TextAttributes.DIM}>
+                DISPATCH RUNTIME
+              </text>
+            </box>
             {summary.recentExecutions.map((exec) => (
               <box key={exec.id} flexDirection="row" justifyContent="space-between">
                 <box flexDirection="row">
@@ -311,9 +326,14 @@ export function OverviewView() {
           </box>
         ) : summary.recentTasks.length > 0 ? (
           <box flexDirection="column">
-            <text fg={THEME_COLORS.fgSecondary} attributes={TextAttributes.BOLD}>
-              Recent Pipeline Tasks:
-            </text>
+            <box flexDirection="row" justifyContent="space-between" marginBottom={0}>
+              <text fg={THEME_COLORS.fgSecondary} attributes={TextAttributes.BOLD}>
+                Recent Pipeline Tasks:
+              </text>
+              <text fg={THEME_COLORS.fgDim} attributes={TextAttributes.DIM}>
+                TASK REGISTER
+              </text>
+            </box>
             {summary.recentTasks.map((task) => (
               <box key={task.id} flexDirection="row" justifyContent="space-between">
                 <box flexDirection="row">

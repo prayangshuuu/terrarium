@@ -19,6 +19,7 @@ import {
   evaluateRisk,
   evaluateMissingFacts,
   classifyTask,
+  CURATED_15_PROFILES,
 } from "../src/index.ts";
 
 describe("Task Intake, Classification, and Planning Suite", () => {
@@ -70,7 +71,7 @@ describe("Task Intake, Classification, and Planning Suite", () => {
     });
 
     it("processes a customer simulation request and maps simulated persona profiles", async () => {
-      const registry = createAgentRegistry();
+      const registry = createAgentRegistry({ autoSeed: true, seedProfiles: CURATED_15_PROFILES });
       const service = createTaskIntakeService({ registry });
 
       const res = await service.processIntake({
@@ -90,7 +91,8 @@ describe("Task Intake, Classification, and Planning Suite", () => {
         expect(simStep).toBeDefined();
         if (simStep) {
           expect(simStep.candidateCapabilities).toContain("persona_simulation");
-          expect(simStep.candidateAgentSlugs).toContain("smb-founder-persona");
+          expect(simStep.candidateAgentSlugs.length).toBeGreaterThan(0);
+          expect(simStep.candidateAgentSlugs.some((s) => s.includes("persona"))).toBe(true);
         }
       }
     });

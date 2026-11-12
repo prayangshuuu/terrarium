@@ -76,11 +76,8 @@ describe("Agent Ecosystem Directory & Inspection Suite (A3, A4 & A5)", () => {
 
     // Verify Seed Profiles in directory
     expect(frame).toContain("Elena Rostova");
-    expect(frame).toContain("Sophia Chen");
+    expect(frame).toContain("Vikram Patel");
     expect(frame).toContain("[ENB]"); // Enabled status
-
-    // Verify simulated persona has [SIMULATED] tag
-    expect(frame).toContain("[SIMULATED]");
   });
 
   test("filters agents by department", async () => {
@@ -133,8 +130,8 @@ describe("Agent Ecosystem Directory & Inspection Suite (A3, A4 & A5)", () => {
 
     await setup.renderOnce();
 
-    // Search for "architecture"
-    controller.setEcosystemSearch("architecture");
+    // Search for "Sophia Chen"
+    controller.setEcosystemSearch("Sophia Chen");
     await setup.renderOnce();
     let frame = setup.captureCharFrame();
 

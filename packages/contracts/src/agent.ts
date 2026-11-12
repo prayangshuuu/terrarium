@@ -23,6 +23,101 @@ export type AgentProfileStatus = "available" | "busy" | "disabled" | "deprecated
 export const AGENT_PROFILE_STATUSES = ["available", "busy", "disabled", "deprecated"] as const;
 
 /**
+ * 50 canonical engineering and organizational domains for the 700+ Agent Profile Ecosystem (Prompt 24).
+ */
+export const AGENT_DOMAINS = [
+  "platform_architecture",
+  "backend_engineering",
+  "frontend_engineering",
+  "fullstack_engineering",
+  "cli_tui_engineering",
+  "mobile_engineering",
+  "api_design",
+  "distributed_systems",
+  "database_engineering",
+  "data_engineering",
+  "data_science",
+  "machine_learning",
+  "deep_learning",
+  "llm_engineering",
+  "rag_knowledge_systems",
+  "agentic_systems",
+  "mlops",
+  "devops",
+  "sre_reliability",
+  "cloud_infrastructure",
+  "networking",
+  "cybersecurity_defense",
+  "application_security",
+  "privacy_engineering",
+  "testing_qa",
+  "performance_engineering",
+  "accessibility",
+  "ux_research",
+  "product_design",
+  "product_management",
+  "technical_writing",
+  "documentation",
+  "research_methodology",
+  "scientific_computing",
+  "embedded_systems",
+  "iot",
+  "robotics",
+  "edge_computing",
+  "computer_vision",
+  "signal_processing",
+  "audio_speech_systems",
+  "language_technology",
+  "localization",
+  "finops_cost_optimization",
+  "compliance_support",
+  "release_engineering",
+  "incident_response",
+  "business_analysis",
+  "market_customer_research",
+  "technical_program_management",
+] as const;
+
+export type AgentDomain = (typeof AGENT_DOMAINS)[number];
+
+export const AGENT_EXPERTISE_BANDS = [
+  "junior",
+  "mid",
+  "senior",
+  "staff",
+  "principal",
+  "specialist",
+  "fellow",
+  "lead",
+] as const;
+
+export type AgentExpertiseBand = (typeof AGENT_EXPERTISE_BANDS)[number];
+
+export const AGENT_RISK_CLASSIFICATIONS = ["low", "medium", "high"] as const;
+export type AgentRiskClassification = (typeof AGENT_RISK_CLASSIFICATIONS)[number];
+
+/**
+ * Rich domain metadata for catalogued agent profiles in the 700+ ecosystem.
+ */
+export interface AgentCatalogMetadata {
+  readonly domain?: AgentDomain;
+  readonly specialization?: string;
+  readonly expertiseLevel?: AgentExpertiseBand;
+  readonly responsibilities?: readonly string[];
+  readonly inputsRequired?: readonly string[];
+  readonly expectedOutputs?: readonly string[];
+  readonly toolsNeeded?: readonly string[];
+  readonly codingAgentCompatibility?: boolean;
+  readonly riskClassification?: AgentRiskClassification;
+  readonly suggestedCollaborators?: readonly string[];
+  readonly handoffConditions?: readonly string[];
+  readonly evaluationCriteria?: readonly string[];
+  readonly exampleTasks?: readonly string[];
+  readonly provenance?: string;
+  readonly [key: string]: unknown;
+}
+
+/**
  * Agent lifecycle status in the virtual organization runtime.
  * Distinguishes stored catalog status from dynamic execution & orchestration state.
  * Aligns with PLAN.md Section 4.1 and PROMPT 15.

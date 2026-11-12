@@ -127,20 +127,21 @@ export async function handleToolInfo(
   const dim = useColor ? "\x1b[2m" : "";
   const riskBadge = formatRiskBadge(tool.riskLevel, useColor);
 
-  let card = `\n${bold}┌────────────────────────────────────────────────────────────────────────────┐${reset}\n`;
-  card += `${bold}│ TOOL: ${tool.id.padEnd(66)}│${reset}\n`;
-  card += `${bold}├────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
-  card += `│ ${bold}Name:${reset}        ${tool.name.padEnd(60)}│\n`;
-  card += `│ ${bold}Category:${reset}    ${tool.category.padEnd(60)}│\n`;
-  card += `│ ${bold}Version:${reset}     ${tool.version.padEnd(60)}│\n`;
-  card += `│ ${bold}Risk Level:${reset}  ${riskBadge.padEnd(useColor ? 28 : 20)} ${bold}Side-Effect:${reset} ${tool.sideEffectClass.padEnd(20)}│\n`;
-  card += `│ ${bold}Approval:${reset}    ${(Boolean(tool.requiresApproval) ? "REQUIRED (Human Gate)" : "Not required").padEnd(60)}│\n`;
-  card += `│ ${bold}Timeouts:${reset}    Default: ${tool.defaultTimeoutMs}ms / Max: ${tool.maxTimeoutMs}ms${" ".repeat(Math.max(0, 36 - String(tool.defaultTimeoutMs).length - String(tool.maxTimeoutMs).length))}│\n`;
-  card += `│ ${bold}Permissions:${reset} ${(tool.requiredPermissions.join(", ") || "none").padEnd(60)}│\n`;
-  card += `│ ${bold}Description:${reset} ${tool.description.padEnd(60)}│\n`;
+  let card = `\n${bold}┌─────────────────────────────────────────────────────────────────────────────┐${reset}\n`;
+  card += `${bold}│ TOOL: ${tool.id.slice(0, 69).padEnd(69)} │${reset}\n`;
+  card += `${bold}├─────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
+  card += `│ ${bold}Name:${reset}        ${tool.name.slice(0, 60).padEnd(60)} │\n`;
+  card += `│ ${bold}Category:${reset}    ${tool.category.slice(0, 60).padEnd(60)} │\n`;
+  card += `│ ${bold}Version:${reset}     ${tool.version.slice(0, 60).padEnd(60)} │\n`;
+  card += `│ ${bold}Risk Level:${reset}  ${riskBadge.padEnd(useColor ? 28 : 20)} ${bold}Side-Effect:${reset} ${tool.sideEffectClass.padEnd(19)} │\n`;
+  card += `│ ${bold}Approval:${reset}    ${(Boolean(tool.requiresApproval) ? "REQUIRED (Human Gate)" : "Not required").padEnd(60)} │\n`;
+  const timeoutText = `Default: ${tool.defaultTimeoutMs}ms / Max: ${tool.maxTimeoutMs}ms`;
+  card += `│ ${bold}Timeouts:${reset}    ${timeoutText.padEnd(60)} │\n`;
+  card += `│ ${bold}Permissions:${reset} ${(tool.requiredPermissions.join(", ") || "none").slice(0, 60).padEnd(60)} │\n`;
+  card += `│ ${bold}Description:${reset} ${tool.description.slice(0, 60).padEnd(60)} │\n`;
 
-  card += `${bold}├────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
-  card += `│ ${bold}Input Parameters (Schema):${reset}${" ".repeat(48)}│\n`;
+  card += `${bold}├─────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
+  card += `│ ${bold}Input Parameters (Schema):${reset}${" ".repeat(49)}│\n`;
 
   const props = tool.inputSchema.properties;
   const reqSet = new Set(tool.inputSchema.required ?? []);
@@ -150,10 +151,10 @@ export async function handleToolInfo(
     const desc = propSchema.description ? ` - ${propSchema.description}` : "";
     const def = propSchema.default !== undefined ? ` [default: ${JSON.stringify(propSchema.default)}]` : "";
     const paramLine = `  • ${propName} (${propSchema.type}${isReq ? ", required" : ""})${def}${desc}`;
-    const truncated = paramLine.length > 70 ? paramLine.substring(0, 67) + "..." : paramLine;
-    card += `│ ${dim}${truncated.padEnd(73)}${reset}│\n`;
+    const truncated = paramLine.length > 71 ? paramLine.substring(0, 68) + "..." : paramLine;
+    card += `│ ${dim}${truncated.padEnd(74)}${reset} │\n`;
   }
 
-  card += `${bold}└────────────────────────────────────────────────────────────────────────────┘${reset}\n`;
+  card += `${bold}└─────────────────────────────────────────────────────────────────────────────┘${reset}\n`;
   return ok(card);
 }

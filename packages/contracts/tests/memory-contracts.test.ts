@@ -229,15 +229,15 @@ describe("Memory & Context Domain Contracts Suite (A1 & A5)", () => {
   });
 
   it("verifies UI visual metadata for freshness, confidence, and categories", () => {
-    expect(MEMORY_FRESHNESS_UI.fresh.glyph).toBe("🟢");
-    expect(MEMORY_FRESHNESS_UI.stale.glyph).toBe("🟡");
-    expect(MEMORY_FRESHNESS_UI.expired.glyph).toBe("🔴");
-    expect(MEMORY_FRESHNESS_UI.superseded.glyph).toBe("⚪");
+    expect(MEMORY_FRESHNESS_UI.fresh.glyph).toBe("●");
+    expect(MEMORY_FRESHNESS_UI.stale.glyph).toBe("▲");
+    expect(MEMORY_FRESHNESS_UI.expired.glyph).toBe("×");
+    expect(MEMORY_FRESHNESS_UI.superseded.glyph).toBe("⊘");
 
     expect(MEMORY_CONFIDENCE_UI.confirmed.badge).toBe("[CONFIRMED]");
     expect(MEMORY_CONFIDENCE_UI.hypothesis.badge).toBe("[HYPOTHESIS]");
 
     expect(MEMORY_CATEGORY_UI.decision_rationale.label).toBe("Decision Record");
-    expect(MEMORY_CATEGORY_UI.known_risk.icon).toBe("⚠️");
+    expect(MEMORY_CATEGORY_UI.known_risk.icon).toBe("▲");
   });
 });

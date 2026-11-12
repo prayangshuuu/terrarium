@@ -124,7 +124,7 @@ export class MarkdownGenerator {
       lines.push("_No unresolved or competing perspectives recorded for this evaluation._");
     } else {
       for (const dis of report.disagreements) {
-        lines.push(`### ⚠️ ${dis.topic}`);
+        lines.push(`### [DISAGREEMENT] ${dis.topic}`);
         lines.push(`**Status:** \`${dis.resolutionStatus.toUpperCase()}\``);
         lines.push("");
         lines.push(dis.summary);

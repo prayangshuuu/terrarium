@@ -14,3 +14,5 @@ export * from "./aider-adapter.ts";
 export * from "./generic-subprocess-adapter.ts";
 export * from "./coding-agent-registry.ts";
 export * from "./coding-agent-router.ts";
+export * from "./isolation-verifier.ts";
+export * from "./claude-code-runner.ts";

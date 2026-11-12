@@ -20,3 +20,5 @@ export * from "./studio-commands.ts";
 export * from "./report-commands.ts";
 export * from "./workflow-commands.ts";
 export * from "./coding-agent-commands.ts";
+export * from "./claude-code-cli.ts";
+export * from "./cli-dispatcher.ts";

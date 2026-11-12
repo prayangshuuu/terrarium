@@ -44,64 +44,64 @@ export function formatMemoryCard(item: MemoryItem): string {
   const confidence = MEMORY_CONFIDENCE_UI[item.confidence];
   const categoryMeta = MEMORY_CATEGORY_UI[item.category];
 
+  const row = (text: string) => `│ ${text.slice(0, 75).padEnd(75)} │`;
+
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ [MEMORY] PROJECT MEMORY: ${item.key.padEnd(51)} │`);
+  lines.push(row(`[MEMORY] PROJECT MEMORY: ${item.key}`));
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ ID:          ${item.id.padEnd(61)} │`);
-  lines.push(`│ Category:    ${(categoryMeta.icon + " " + categoryMeta.label).padEnd(61)} │`);
-  lines.push(`│ Confidence:  ${(confidence.badge + " " + confidence.label).padEnd(61)} │`);
-  lines.push(`│ Freshness:   ${(freshness.glyph + " " + freshness.label + " - " + freshness.description).slice(0, 61).padEnd(61)} │`);
-  lines.push(`│ Project:     ${(item.projectId ?? "default").padEnd(61)} │`);
+  lines.push(row(`ID:          ${item.id}`));
+  lines.push(row(`Category:    ${categoryMeta.icon} ${categoryMeta.label}`));
+  lines.push(row(`Confidence:  ${confidence.badge} ${confidence.label}`));
+  lines.push(row(`Freshness:   ${freshness.glyph} ${freshness.label} - ${freshness.description}`));
+  lines.push(row(`Project:     ${item.projectId ?? "default"}`));
 
   if (item.taskId) {
-    lines.push(`│ Task Scope:  ${item.taskId.padEnd(61)} │`);
+    lines.push(row(`Task Scope:  ${item.taskId}`));
   }
   if (item.owner) {
-    lines.push(`│ Author:      ${item.owner.padEnd(61)} │`);
+    lines.push(row(`Author:      ${item.owner}`));
   }
   if (item.lastValidatedAt) {
-    lines.push(`│ Validated:   ${item.lastValidatedAt.padEnd(61)} │`);
+    lines.push(row(`Validated:   ${item.lastValidatedAt}`));
   }
 
   // Provenance details
   if (item.provenance) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ [PROVENANCE]                                                                │`);
-    lines.push(`│ Source:      ${item.provenance.sourceType.padEnd(61)} │`);
+    lines.push(row(`[PROVENANCE]`));
+    lines.push(row(`Source:      ${item.provenance.sourceType}`));
     if (item.provenance.sourceReference) {
-      lines.push(`│ Reference:   ${item.provenance.sourceReference.padEnd(61)} │`);
+      lines.push(row(`Reference:   ${item.provenance.sourceReference}`));
     }
     if (item.provenance.rationale) {
-      lines.push(`│ Rationale:   ${item.provenance.rationale.slice(0, 61).padEnd(61)} │`);
+      lines.push(row(`Rationale:   ${item.provenance.rationale}`));
     }
   }
 
   // Conflict warning banner
   if (item.isConflicted) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ [WARN] CONFLICT DETECTED — UNRESOLVED DIVERGENCE                            │`);
+    lines.push(row(`[WARN] CONFLICT DETECTED - UNRESOLVED DIVERGENCE`));
     if (item.conflictWithId) {
-      lines.push(`│ Proposed By: ${item.conflictWithId.padEnd(61)} │`);
+      lines.push(row(`Proposed By: ${item.conflictWithId}`));
     }
     if (item.conflictReason) {
-      const reasonSnippet = item.conflictReason.slice(0, 59);
-      lines.push(`│ Reason:      ${reasonSnippet.padEnd(61)} │`);
+      lines.push(row(`Reason:      ${item.conflictReason}`));
     }
-    lines.push(`│ Resolution:  ${(item.conflictResolution ?? "unresolved").padEnd(61)} │`);
+    lines.push(row(`Resolution:  ${item.conflictResolution ?? "unresolved"}`));
   }
 
   // Content
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ [CONTENT]:                                                                  │`);
+  lines.push(row(`[CONTENT]:`));
   const contentLines = item.content.split("\n");
   for (const cLine of contentLines) {
-    const wrapped = cLine.length > 73 ? `${cLine.slice(0, 70)}...` : cLine;
-    lines.push(`│   ${wrapped.padEnd(74)}│`);
+    lines.push(row(`  ${cLine}`));
   }
 
   if (item.tags.length > 0) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ Tags:        ${item.tags.join(", ").padEnd(61)} │`);
+    lines.push(row(`Tags:        ${item.tags.join(", ")}`));
   }
 
   lines.push(`└─────────────────────────────────────────────────────────────────────────────┘`);

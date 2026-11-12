@@ -187,51 +187,53 @@ export function formatApprovalCard(approval: ApprovalRequest, useColor = false):
       ? yellow
       : dim;
 
-  let card = `\n${bold}┌────────────────────────────────────────────────────────────────────────────┐${reset}\n`;
-  card += `${bold}│ APPROVAL REQUEST: ${approval.id.padEnd(54)}│${reset}\n`;
-  card += `${bold}├────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
-  card += `│ ${bold}Status:${reset}       ${statusColor}${statusMeta.glyph} ${statusMeta.label.padEnd(20)}${reset} ${bold}Risk:${reset} ${riskBadge.padEnd(useColor ? 28 : 20)}│\n`;
-  card += `│ ${bold}Action:${reset}       ${approval.actionType.padEnd(58)}│\n`;
-  card += `│ ${bold}Tool ID:${reset}      ${(approval.toolId ?? "N/A").padEnd(58)}│\n`;
-  card += `│ ${bold}Task ID:${reset}      ${approval.taskId.padEnd(58)}│\n`;
-  card += `│ ${bold}Requested By:${reset} ${approval.requestedByAgentId.padEnd(58)}│\n`;
-  card += `│ ${bold}Requested At:${reset} ${approval.requestedAt.padEnd(58)}│\n`;
+  let card = `\n${bold}┌─────────────────────────────────────────────────────────────────────────────┐${reset}\n`;
+  card += `${bold}│ APPROVAL REQUEST: ${approval.id.slice(0, 56).padEnd(56)} │${reset}\n`;
+  card += `${bold}├─────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
+  card += `│ ${bold}Status:${reset}       ${statusColor}${statusMeta.glyph} ${statusMeta.label.padEnd(20)}${reset} ${bold}Risk:${reset} ${riskBadge.padEnd(useColor ? 28 : 20)} │\n`;
+  card += `│ ${bold}Action:${reset}       ${approval.actionType.slice(0, 59).padEnd(59)} │\n`;
+  card += `│ ${bold}Tool ID:${reset}      ${(approval.toolId ?? "N/A").slice(0, 59).padEnd(59)} │\n`;
+  card += `│ ${bold}Task ID:${reset}      ${approval.taskId.slice(0, 59).padEnd(59)} │\n`;
+  card += `│ ${bold}Requested By:${reset} ${approval.requestedByAgentId.slice(0, 59).padEnd(59)} │\n`;
+  card += `│ ${bold}Requested At:${reset} ${approval.requestedAt.slice(0, 59).padEnd(59)} │\n`;
   if (approval.expiresAt) {
-    card += `│ ${bold}Expires At:${reset}   ${approval.expiresAt.padEnd(58)}│\n`;
+    card += `│ ${bold}Expires At:${reset}   ${approval.expiresAt.slice(0, 59).padEnd(59)} │\n`;
   }
   if (approval.reviewedByUserId) {
-    card += `│ ${bold}Reviewed By:${reset}  ${approval.reviewedByUserId.padEnd(58)}│\n`;
+    card += `│ ${bold}Reviewed By:${reset}  ${approval.reviewedByUserId.slice(0, 59).padEnd(59)} │\n`;
   }
   if (approval.decisionReason) {
-    card += `│ ${bold}Reason:${reset}       ${approval.decisionReason.padEnd(58)}│\n`;
+    card += `│ ${bold}Reason:${reset}       ${approval.decisionReason.slice(0, 59).padEnd(59)} │\n`;
   }
 
-  card += `${bold}├────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
-  card += `│ ${bold}${red}[CONSEQUENCE WARNING]:${reset}${" ".repeat(50)}│\n`;
-  card += `│   ${bold}${consequence.title}${reset}${" ".repeat(Math.max(0, 71 - consequence.title.length))}│\n`;
-  card += `│   ${dim}${consequence.summary}${reset}${" ".repeat(Math.max(0, 71 - consequence.summary.length))}│\n`;
+  card += `${bold}├─────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
+  card += `│ ${bold}${red}[CONSEQUENCE WARNING]:${reset}${" ".repeat(51)}│\n`;
+  const titlePad = Math.max(0, 72 - consequence.title.length);
+  card += `│   ${bold}${consequence.title}${reset}${" ".repeat(titlePad)} │\n`;
+  const summaryPad = Math.max(0, 72 - consequence.summary.length);
+  card += `│   ${dim}${consequence.summary}${reset}${" ".repeat(summaryPad)} │\n`;
 
   for (const detail of consequence.details) {
     const formatted = `• ${detail}`;
-    card += `│   ${dim}${formatted.padEnd(69)}${reset}│\n`;
+    card += `│   ${dim}${formatted.slice(0, 71).padEnd(71)}${reset} │\n`;
   }
 
   if (approval.payload && Object.keys(approval.payload).length > 0) {
-    card += `${bold}├────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
-    card += `│ ${bold}Proposed Execution Payload:${reset}${" ".repeat(47)}│\n`;
+    card += `${bold}├─────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
+    card += `│ ${bold}Proposed Execution Payload:${reset}${" ".repeat(48)}│\n`;
     for (const [key, val] of Object.entries(approval.payload)) {
       const line = `  ${key}: ${JSON.stringify(val)}`;
-      const truncated = line.length > 70 ? line.substring(0, 67) + "..." : line;
-      card += `│ ${dim}${truncated.padEnd(73)}${reset}│\n`;
+      const truncated = line.length > 71 ? line.substring(0, 68) + "..." : line;
+      card += `│ ${dim}${truncated.padEnd(74)}${reset} │\n`;
     }
   }
 
   if (approval.payloadHash) {
-    card += `${bold}├────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
+    card += `${bold}├─────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
     const hashLine = `Payload Hash: ${approval.payloadHash}`;
-    card += `│ ${dim}${hashLine.padEnd(73)}${reset}│\n`;
+    card += `│ ${dim}${hashLine.slice(0, 73).padEnd(74)}${reset} │\n`;
   }
 
-  card += `${bold}└────────────────────────────────────────────────────────────────────────────┘${reset}\n`;
+  card += `${bold}└─────────────────────────────────────────────────────────────────────────────┘${reset}\n`;
   return card;
 }

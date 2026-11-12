@@ -23,8 +23,7 @@ import {
 describe("Agent Profile Registry & Capability Catalog", () => {
   describe("Seed Catalog & Taxonomy Verification", () => {
     it("validates every profile in SEED_AGENT_PROFILES against schema contracts", () => {
-      expect(SEED_AGENT_PROFILES.length).toBeGreaterThanOrEqual(10);
-      expect(SEED_AGENT_PROFILES.length).toBeLessThan(50); // Bounded: not fabricating hundreds
+      expect(SEED_AGENT_PROFILES.length).toBeGreaterThanOrEqual(700); // Prompt 24 700+ ecosystem catalog
 
       for (const profile of SEED_AGENT_PROFILES) {
         const valRes = validateAgentProfile(profile);

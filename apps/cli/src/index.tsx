@@ -11,6 +11,7 @@ import { createRoot } from "@opentui/react";
 import { getDefaultConfig } from "@terrarium/config";
 import { createCoreEngine } from "@terrarium/core";
 import { UiStateController, TerrariumUiProvider, AppShell } from "./ui/index.js";
+import { dispatchCliCommand } from "./commands/cli-dispatcher.ts";
 
 export { AppShell, UiStateController, TerrariumUiProvider };
 
@@ -18,31 +19,36 @@ export { AppShell, UiStateController, TerrariumUiProvider };
 const isMain = import.meta.main;
 
 if (isMain) {
-  const config = getDefaultConfig();
-  const engine = createCoreEngine({ config, enableDatabase: true });
-  const controller = new UiStateController({
-    engine,
-    projectName: config.appName,
-    environment: "development",
-  });
+  const cliArgs = process.argv.slice(2);
+  if (cliArgs.length > 0) {
+    await dispatchCliCommand(cliArgs);
+  } else {
+    const config = getDefaultConfig();
+    const engine = createCoreEngine({ config, enableDatabase: true });
+    const controller = new UiStateController({
+      engine,
+      projectName: config.appName,
+      environment: "development",
+    });
 
-  const renderer = await createCliRenderer();
+    const renderer = await createCliRenderer();
 
-  const handleQuit = async () => {
-    controller.destroy();
-    try {
-      await engine.shutdown();
-    } catch {}
-    renderer.destroy();
-    process.exit(0);
-  };
+    const handleQuit = async () => {
+      controller.destroy();
+      try {
+        await engine.shutdown();
+      } catch {}
+      renderer.destroy();
+      process.exit(0);
+    };
 
-  createRoot(renderer).render(
-    <TerrariumUiProvider controller={controller}>
-      <AppShell
-        version={config.version}
-        onQuit={handleQuit}
-      />
-    </TerrariumUiProvider>
-  );
+    createRoot(renderer).render(
+      <TerrariumUiProvider controller={controller}>
+        <AppShell
+          version={config.version}
+          onQuit={handleQuit}
+        />
+      </TerrariumUiProvider>
+    );
+  }
 }

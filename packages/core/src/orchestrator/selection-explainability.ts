@@ -66,7 +66,7 @@ export function formatSelectionExplainability(
     if (decision.candidateScores.length > 1) {
       lines.push(`  ${colorize("Evaluated Candidates:", ANSI.dim, useColor)}`);
       for (const candidate of decision.candidateScores.slice(0, 3)) {
-        const mark = candidate.profile.id === decision.selectedProfile.id ? "✓" : "•";
+        const mark = candidate.profile.id === decision.selectedProfile.id ? "●" : "•";
         lines.push(
           `    ${mark} ${candidate.profile.displayName} (score: ${candidate.score})`
         );

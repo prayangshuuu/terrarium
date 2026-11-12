@@ -13,6 +13,9 @@ import {
   createAgentRegistry,
   DefaultAgentRegistry,
   createCoreEngine,
+  CURATED_15_PROFILES,
+  ECOSYSTEM_CATALOG_700,
+  SEED_AGENT_PROFILES,
 } from "../src/index.ts";
 import { type AgentProfileInput, AGENT_DEPARTMENTS } from "@terrarium/contracts";
 
@@ -73,7 +76,7 @@ describe("Agent Catalog Scalability & Limitation Removal Suite (A1 & A3)", () =>
   });
 
   it("handles standard 15-agent seed catalog without artificial limits (size: 15)", async () => {
-    const registry = createAgentRegistry({ autoSeed: true });
+    const registry = createAgentRegistry({ autoSeed: true, seedProfiles: CURATED_15_PROFILES });
     const count = await registry.count();
     expect(count).toBe(15);
 
@@ -85,7 +88,7 @@ describe("Agent Catalog Scalability & Limitation Removal Suite (A1 & A3)", () =>
   });
 
   it("scales beyond previous 15-profile boundary without truncation (size: 16)", async () => {
-    const registry = createAgentRegistry({ autoSeed: true });
+    const registry = createAgentRegistry({ autoSeed: true, seedProfiles: CURATED_15_PROFILES });
     // Add 16th profile
     const addRes = await registry.register(makeMockProfile(16, "product"));
     expect(addRes.success).toBe(true);
@@ -234,6 +237,80 @@ describe("Agent Catalog Scalability & Limitation Removal Suite (A1 & A3)", () =>
 
       // Sum of active and dormant equals total registered profiles
       expect(record.activeProfileSlugs.length + record.dormantProfileSlugs.length).toBe(totalProfiles);
+    }
+  });
+
+  it("scales to exactly 700 profiles with fast search, filters, and stable pagination (Prompt 24)", async () => {
+    const registry = createAgentRegistry({ autoSeed: false, seedProfiles: [] });
+
+    // Load exactly 700 profiles from the ecosystem catalogue
+    const profiles700 = ECOSYSTEM_CATALOG_700.slice(0, 700);
+    expect(profiles700.length).toBe(700);
+
+    const startImport = performance.now();
+    const importRes = await registry.importProfiles(profiles700 as any);
+    const duration = performance.now() - startImport;
+
+    expect(importRes.success).toBe(true);
+    expect(duration).toBeLessThan(1000); // 700 profiles imported in under 1 second
+
+    const totalCount = await registry.count();
+    expect(totalCount).toBe(700);
+
+    // Pagination: page 1 of 50
+    const page1 = await registry.list({ page: 1, pageSize: 50 });
+    expect(page1.success).toBe(true);
+    if (page1.success) {
+      expect(page1.data.length).toBe(50);
+    }
+
+    // Pagination: page 14 of 50 (last page: 700 / 50 = 14)
+    const page14 = await registry.list({ page: 14, pageSize: 50 });
+    expect(page14.success).toBe(true);
+    if (page14.success) {
+      expect(page14.data.length).toBe(50);
+    }
+
+    // Fast search across all 700 profiles
+    const startSearch = performance.now();
+    const searchRes = await registry.search({ query: "architect", limit: 20 });
+    const searchDuration = performance.now() - startSearch;
+
+    expect(searchRes.success).toBe(true);
+    expect(searchDuration).toBeLessThan(50); // Sub-50ms search across 700 items
+    if (searchRes.success) {
+      expect(searchRes.data.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("scales beyond 700 profiles with full shipped ecosystem (720+ profiles) and preserves demand-based activation", async () => {
+    // Default autoSeed loads full SEED_AGENT_PROFILES (720 profiles)
+    const registry = createAgentRegistry({ autoSeed: true });
+    const count = await registry.count();
+    expect(count).toBeGreaterThanOrEqual(700);
+
+    // Dynamically register 50 additional profiles to reach 800+ profiles
+    const extraProfiles: AgentProfileInput[] = [];
+    for (let i = 1; i <= 50; i++) {
+      extraProfiles.push(makeMockProfile(2000 + i, "engineering"));
+    }
+    const importExtra = await registry.importProfiles(extraProfiles);
+    expect(importExtra.success).toBe(true);
+
+    const totalAfterExtra = await registry.count();
+    expect(totalAfterExtra).toBe(count + 50);
+    expect(totalAfterExtra).toBeGreaterThan(750);
+
+    // Verify department count queries remain fast
+    const engCount = await registry.count("engineering");
+    expect(engCount).toBeGreaterThan(50);
+
+    // Verify search query across 800+ profiles
+    const searchRes = await registry.search({ query: "Specialist Agent 2025" });
+    expect(searchRes.success).toBe(true);
+    if (searchRes.success) {
+      expect(searchRes.data.length).toBe(1);
+      expect(searchRes.data[0]?.slug).toBe("agent-scale-2025");
     }
   });
 });

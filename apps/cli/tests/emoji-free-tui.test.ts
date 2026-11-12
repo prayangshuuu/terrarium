@@ -28,13 +28,15 @@ function scanDirectoryForSourceFiles(dir: string): string[] {
   return results;
 }
 
-// Unicode blocks covering emojis, miscellaneous symbols, emoticons, and pictorial glyphs
+// Unicode blocks covering emojis, miscellaneous symbols, emoticons, media controls, and pictorial glyphs
 const EMOJI_AND_PICTORIAL_REGEX =
-  /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/u;
+  /[\u{1F300}-\u{1F9FF}\u{1FA00}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{203C}\u{2049}]/u;
 
 describe("PROMPT 23 Part D: Emoji-Free Terminal Aesthetics", () => {
   const uiSrcDir = path.resolve(__dirname, "../src/ui");
   const commandsSrcDir = path.resolve(__dirname, "../src/commands");
+  const contractsUiFile = path.resolve(__dirname, "../../../packages/contracts/src/ui.ts");
+  const indexFile = path.resolve(__dirname, "../src/index.tsx");
 
   it("verifies GLYPHS token dictionary contains zero unicode emojis", () => {
     for (const [key, glyph] of Object.entries(GLYPHS)) {
@@ -107,6 +109,30 @@ describe("PROMPT 23 Part D: Emoji-Free Terminal Aesthetics", () => {
     if (violations.length > 0) {
       console.error("Emoji violations detected in CLI commands:", violations);
     }
+    expect(violations).toEqual([]);
+  });
+
+  it("asserts zero emojis exist in entrypoint (apps/cli/src/index.tsx)", () => {
+    const content = fs.readFileSync(indexFile, "utf8");
+    const lines = content.split("\n");
+    const violations: { line: number; text: string }[] = [];
+    lines.forEach((line, index) => {
+      if (EMOJI_AND_PICTORIAL_REGEX.test(line)) {
+        violations.push({ line: index + 1, text: line.trim() });
+      }
+    });
+    expect(violations).toEqual([]);
+  });
+
+  it("asserts zero emojis exist in domain UI contracts (packages/contracts/src/ui.ts)", () => {
+    const content = fs.readFileSync(contractsUiFile, "utf8");
+    const lines = content.split("\n");
+    const violations: { line: number; text: string }[] = [];
+    lines.forEach((line, index) => {
+      if (EMOJI_AND_PICTORIAL_REGEX.test(line)) {
+        violations.push({ line: index + 1, text: line.trim() });
+      }
+    });
     expect(violations).toEqual([]);
   });
 });

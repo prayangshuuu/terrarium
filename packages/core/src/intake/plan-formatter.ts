@@ -175,7 +175,7 @@ export function formatPlanTerminal(plan: TaskPlan, options: FormatPlanOptions = 
 
       if (step.requiresApproval) {
         lines.push(
-          `   ${colorize("⚠️  APPROVAL GATE REQUIRED:", ANSI.yellow + ANSI.bold, useColor)} ${
+          `   ${colorize("[GATE] APPROVAL GATE REQUIRED:", ANSI.yellow + ANSI.bold, useColor)} ${
             step.approvalReason ?? "User authorization required"
           }`
         );
@@ -184,7 +184,7 @@ export function formatPlanTerminal(plan: TaskPlan, options: FormatPlanOptions = 
       if (step.completionCriteria.length > 0) {
         lines.push(`   ${colorize("Completion Criteria:", ANSI.dim, useColor)}`);
         for (const cc of step.completionCriteria) {
-          lines.push(`     ✓ ${cc}`);
+          lines.push(`     • ${cc}`);
         }
       }
     }
@@ -242,7 +242,7 @@ export function formatPlanMarkdown(plan: TaskPlan): string {
   if (plan.clarificationQuestions.length > 0) {
     lines.push(`## Clarification Required\n`);
     for (const q of plan.clarificationQuestions) {
-      lines.push(`### ${q.criticality === "blocking" ? "🛑 [BLOCKING]" : "ℹ️ [ADVISORY]"} ${q.question}`);
+      lines.push(`### ${q.criticality === "blocking" ? "[BLOCKING]" : "[ADVISORY]"} ${q.question}`);
       lines.push(`- **ID:** \`${q.id}\``);
       lines.push(`- **Rationale:** ${q.rationale}`);
       if (q.suggestedOptions?.length) {

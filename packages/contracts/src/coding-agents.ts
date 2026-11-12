@@ -65,6 +65,103 @@ export const CODING_AGENT_INVOCATION_MODES = [
 export type CodingAgentInvocationMode = (typeof CODING_AGENT_INVOCATION_MODES)[number];
 
 /**
+ * Execution policy for Claude Code launcher (Prompt 24).
+ * standard: default mode, Claude Code's normal permission prompts are strictly preserved.
+ * isolated_bypass: dangerous-permissions flag (--dangerously-skip-permissions) enabled ONLY inside verified isolation.
+ */
+export const CLAUDE_CODE_EXECUTION_POLICIES = [
+  "standard",
+  "isolated_bypass",
+] as const;
+
+export type ClaudeCodeExecutionPolicy = (typeof CLAUDE_CODE_EXECUTION_POLICIES)[number];
+
+/**
+ * Isolation verification status for dangerous execution modes.
+ */
+export const ISOLATION_STATUSES = [
+  "verified",        // Verified isolated directory/worktree with credentials shielded
+  "unsupported",     // Host/path cannot satisfy isolation
+  "failed",          // Verification check failed (e.g. root or home dir, or sensitive files exposed)
+  "not_requested",   // Standard mode does not mandate isolated bypass
+] as const;
+
+export type IsolationStatus = (typeof ISOLATION_STATUSES)[number];
+
+/**
+ * Detailed report of an isolation boundary verification.
+ */
+export interface IsolationVerificationReport {
+  readonly isIsolated: boolean;
+  readonly status: IsolationStatus;
+  readonly workspaceRoot: string;
+  readonly isWorktree: boolean;
+  readonly isHomeDirOrRoot: boolean;
+  readonly shieldedPaths: readonly string[];
+  readonly exposedSensitivePaths: readonly string[];
+  readonly networkPolicy: "unrestricted" | "host_only" | "disabled" | "unknown";
+  readonly containerOrOsSandboxActive: boolean;
+  readonly failureReason?: string;
+  readonly honestLimitations: readonly string[];
+}
+
+/**
+ * Lifecycle states of an interactive or subprocess coding agent session.
+ */
+export const CODING_AGENT_SESSION_STATES = [
+  "discovered",
+  "validated",
+  "awaiting_approval",
+  "preparing_isolation",
+  "launching",
+  "running",
+  "stopping",
+  "completed",
+  "failed",
+  "cancelled",
+] as const;
+
+export type CodingAgentSessionState = (typeof CODING_AGENT_SESSION_STATES)[number];
+
+/**
+ * Standardized session metadata tracked across the coding agent lifecycle.
+ */
+export interface CodingAgentSessionMetadata {
+  readonly sessionId: string;
+  readonly tool: CodingAgentType;
+  readonly executablePath: string;
+  readonly detectedVersion: string;
+  readonly executionPolicy: ClaudeCodeExecutionPolicy;
+  readonly isolationStatus: IsolationStatus;
+  readonly isolationReport?: IsolationVerificationReport;
+  readonly workspaceRoot: string;
+  readonly argv: readonly string[];
+  readonly state: CodingAgentSessionState;
+  readonly startedAt: string;
+  readonly finishedAt?: string;
+  readonly exitCode?: number;
+  readonly terminationReason?: string;
+  readonly durationMs?: number;
+}
+
+/**
+ * Launch configuration for the first-class Claude Code command.
+ */
+export interface ClaudeCodeLaunchOptions {
+  readonly rawArgs: readonly string[];
+  readonly passthroughArgs: readonly string[];
+  readonly executionPolicy: ClaudeCodeExecutionPolicy;
+  readonly explicitOptIn: boolean;
+  readonly confirmed: boolean;
+  readonly workspaceRoot: string;
+  readonly customExecutablePath?: string;
+  readonly dryRun?: boolean;
+  readonly interactive?: boolean;
+  readonly allowNetwork?: boolean;
+  readonly envOverrides?: Readonly<Record<string, string>>;
+}
+
+/**
  * Capabilities declared by a coding agent adapter.
  */
 export interface CodingAgentCapabilities {

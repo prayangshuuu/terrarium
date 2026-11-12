@@ -33,7 +33,7 @@ import { TelemetryManager } from "./observability/index.ts";
 import { createEngineeringStudioService, EngineeringStudioService } from "./studio/index.ts";
 import { createReportService, ReportService } from "./reports/index.ts";
 import { EndToEndWorkflowPipeline } from "./workflow/index.ts";
-import { createCodingAgentRegistry, CodingAgentRegistry, createCodingAgentRouter, CodingAgentRouter } from "./coding-agents/index.ts";
+import { createCodingAgentRegistry, CodingAgentRegistry, createCodingAgentRouter, CodingAgentRouter, ClaudeCodeRunner } from "./coding-agents/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
@@ -80,6 +80,7 @@ export interface CoreEngine {
   readonly workflow: EndToEndWorkflowPipeline;
   readonly codingAgents: CodingAgentRegistry;
   readonly codingAgentRouter: CodingAgentRouter;
+  readonly claudeCodeRunner: ClaudeCodeRunner;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -214,6 +215,8 @@ export function createCoreEngine(
     ? (optionsOrConfig as CreateCoreEngineOptions).codingAgentRouter!
     : createCodingAgentRouter({ registry: codingAgents });
 
+  const claudeCodeRunner = new ClaudeCodeRunner();
+
   return {
     config,
     db,
@@ -233,6 +236,7 @@ export function createCoreEngine(
     workflow,
     codingAgents,
     codingAgentRouter,
+    claudeCodeRunner,
     getState(): CoreEngineState {
       return {
         status,

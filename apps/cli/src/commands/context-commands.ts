@@ -37,72 +37,71 @@ export function formatContextPackageCard(pkg: AgentContextPackage): string {
   const lines: string[] = [];
   const pctUsed = Math.min(100, Math.round((pkg.tokenEstimate / pkg.tokenLimit) * 100));
 
+  const row = (text: string) => `│ ${text.slice(0, 75).padEnd(75)} │`;
+
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ [CONTEXT] AGENT CONTEXT PACKAGE                                             │`);
+  lines.push(row(`[CONTEXT] AGENT CONTEXT PACKAGE`));
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ ID:          ${pkg.id.padEnd(61)} │`);
-  lines.push(`│ Agent:       ${pkg.agentSlug.padEnd(61)} │`);
-  lines.push(`│ Department:  ${pkg.department.toUpperCase().padEnd(61)} │`);
-  lines.push(`│ Project:     ${pkg.projectId.padEnd(61)} │`);
-  lines.push(`│ Task ID:     ${pkg.taskId.padEnd(61)} │`);
-  lines.push(`│ Task Title:  ${pkg.taskContext.title.slice(0, 61).padEnd(61)} │`);
-  lines.push(`│ Assembled:   ${pkg.assembledAt.padEnd(61)} │`);
+  lines.push(row(`ID:          ${pkg.id}`));
+  lines.push(row(`Agent:       ${pkg.agentSlug}`));
+  lines.push(row(`Department:  ${pkg.department.toUpperCase()}`));
+  lines.push(row(`Project:     ${pkg.projectId}`));
+  lines.push(row(`Task ID:     ${pkg.taskId}`));
+  lines.push(row(`Task Title:  ${pkg.taskContext.title}`));
+  lines.push(row(`Assembled:   ${pkg.assembledAt}`));
 
   // Token budget gauge
   const budgetBar = `[${"█".repeat(Math.floor(pctUsed / 5))}${"-".repeat(20 - Math.floor(pctUsed / 5))}] ${pctUsed}% (${pkg.tokenEstimate} / ${pkg.tokenLimit} tokens)`;
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ [TOKENS] TOKEN BUDGET:                                                      │`);
-  lines.push(`│   ${budgetBar.padEnd(74)}│`);
+  lines.push(row(`[TOKENS] TOKEN BUDGET:`));
+  lines.push(row(`  ${budgetBar}`));
 
   // Warnings
   if (pkg.warnings.length > 0) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ [WARN] CONTEXT WARNINGS (${pkg.warnings.length}):                                          │`);
+    lines.push(row(`[WARN] CONTEXT WARNINGS (${pkg.warnings.length}):`));
     for (const w of pkg.warnings) {
-      const wrapped = w.length > 70 ? `${w.slice(0, 67)}...` : w;
-      lines.push(`│   • ${wrapped.padEnd(72)}│`);
+      lines.push(row(`  • ${w}`));
     }
   }
 
   // Active constraints
   if (pkg.activeConstraints.length > 0) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ [CONSTRAINTS] ACTIVE CONSTRAINTS (${pkg.activeConstraints.length}):                        │`);
+    lines.push(row(`[CONSTRAINTS] ACTIVE CONSTRAINTS (${pkg.activeConstraints.length}):`));
     for (const c of pkg.activeConstraints) {
-      const wrapped = c.length > 70 ? `${c.slice(0, 67)}...` : c;
-      lines.push(`│   • ${wrapped.padEnd(72)}│`);
+      lines.push(row(`  • ${c}`));
     }
   }
 
   // Durable decisions
   if (pkg.durableDecisions.length > 0) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ [DECISIONS] DURABLE DECISIONS RETAINED (${pkg.durableDecisions.length}):                    │`);
+    lines.push(row(`[DECISIONS] DURABLE DECISIONS RETAINED (${pkg.durableDecisions.length}):`));
     for (const d of pkg.durableDecisions) {
-      const title = `${d.key}: ${d.content.slice(0, 50)}...`;
-      lines.push(`│   • ${title.padEnd(72)}│`);
+      const title = `${d.key}: ${d.content}`;
+      lines.push(row(`  • ${title}`));
     }
   }
 
   // Relevant memories
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ [MEMORIES] RELEVANT MEMORIES (${pkg.relevantMemories.length}):                             │`);
+  lines.push(row(`[MEMORIES] RELEVANT MEMORIES (${pkg.relevantMemories.length}):`));
   for (const m of pkg.relevantMemories.slice(0, 5)) {
     const summary = `${m.category} | ${m.key} (${m.confidence})`;
-    lines.push(`│   • ${summary.padEnd(72)}│`);
+    lines.push(row(`  • ${summary}`));
   }
   if (pkg.relevantMemories.length > 5) {
-    lines.push(`│   ... and ${pkg.relevantMemories.length - 5} more memories retained                      │`);
+    lines.push(row(`  ... and ${pkg.relevantMemories.length - 5} more memories retained`));
   }
 
   // Conversation history summary
   if (pkg.conversationSummary) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ [CONVERSATION] CONVERSATION SUMMARY:                                        │`);
+    lines.push(row(`[CONVERSATION] CONVERSATION SUMMARY:`));
     const summaryLines = pkg.conversationSummary.split("\n").slice(0, 4);
     for (const s of summaryLines) {
-      const wrapped = s.length > 70 ? `${s.slice(0, 67)}...` : s;
-      lines.push(`│   ${wrapped.padEnd(74)}│`);
+      lines.push(row(`  ${s}`));
     }
   }
 
