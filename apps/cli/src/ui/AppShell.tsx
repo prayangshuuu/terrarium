@@ -25,6 +25,7 @@ import { EcosystemView } from "./views/EcosystemView.js";
 import { TasksView } from "./views/TasksView.js";
 import { ConversationsView } from "./views/ConversationsView.js";
 import { StudioView } from "./views/StudioView.js";
+import { ReportsView } from "./views/ReportsView.js";
 import { PlaceholderView } from "./views/PlaceholderView.js";
 
 export interface AppShellProps {
@@ -233,6 +234,8 @@ export function AppShell({
                 <ConversationsView />
               ) : state.activeWorkspace === "studio" ? (
                 <StudioView />
+              ) : state.activeWorkspace === "reports" ? (
+                <ReportsView />
               ) : (
                 <PlaceholderView workspaceId={state.activeWorkspace} />
               )}

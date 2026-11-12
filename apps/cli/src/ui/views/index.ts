@@ -10,3 +10,4 @@ export * from "./EcosystemView.js";
 export * from "./TasksView.js";
 export * from "./ConversationsView.js";
 export * from "./StudioView.js";
+export * from "./ReportsView.js";

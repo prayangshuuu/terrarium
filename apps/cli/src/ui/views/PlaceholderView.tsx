@@ -22,7 +22,7 @@ export function PlaceholderView({ workspaceId }: PlaceholderViewProps) {
     return null;
   }
 
-  const isSimulated = workspaceId === "ecosystem" || workspaceId === "reports";
+  const isSimulated = workspaceId === "ecosystem";
 
   return (
     <box flexDirection="column" paddingX={2} paddingY={1} flexGrow={1}>

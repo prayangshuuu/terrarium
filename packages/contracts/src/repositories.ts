@@ -18,7 +18,7 @@ import { type Message, type Session } from "./session.ts";
 import { type Artifact } from "./artifacts.ts";
 import { type ApprovalRequest, type ApprovalStatus } from "./approvals.ts";
 import { type DomainEvent } from "./events.ts";
-import { type Report } from "./reports.ts";
+import { type Report, type ReportType } from "./reports.ts";
 import { type MemoryCategory, type MemoryItem, type MemoryFilter } from "./memory.ts";
 import { type AgentDepartment } from "./departments.ts";
 import { type AgentProfile, type AgentProfileStatus } from "./agent.ts";
@@ -113,9 +113,19 @@ export interface EventRepository {
   query(options?: EventQueryOptions): Promise<Result<readonly DomainEvent[], DatabaseError>>;
 }
 
+export interface ReportQueryOptions {
+  readonly taskId?: string;
+  readonly reportType?: ReportType;
+  readonly status?: "draft" | "final";
+  readonly hasSimulatedData?: boolean;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
 export interface ReportRepository {
   findById(id: string): Promise<Result<Report | null, DatabaseError>>;
   listByTaskId(taskId: string): Promise<Result<readonly Report[], DatabaseError>>;
+  list(options?: ReportQueryOptions): Promise<Result<readonly Report[], DatabaseError>>;
   create(report: Report): Promise<Result<Report, DuplicateEntityError | DatabaseError>>;
   update(report: Report): Promise<Result<Report, NotFoundError | DatabaseError>>;
   delete(id: string): Promise<Result<boolean, DatabaseError>>;

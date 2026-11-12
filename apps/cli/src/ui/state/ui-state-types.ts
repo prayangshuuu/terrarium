@@ -40,6 +40,11 @@ import {
   type BoundedTestRunResult,
   type PatchApplicationResult,
   type PatchRollbackResult,
+  type Report,
+  type ReportType,
+  type ReportEvidenceItem,
+  type ReportDisagreement,
+  type ReportRecommendation,
 } from "@terrarium/contracts";
 
 export {
@@ -77,7 +82,14 @@ export {
   type BoundedTestRunResult,
   type PatchApplicationResult,
   type PatchRollbackResult,
+  type Report,
+  type ReportType,
+  type ReportEvidenceItem,
+  type ReportDisagreement,
+  type ReportRecommendation,
 };
+
+export type ReportsActiveTab = "overview" | "evidence" | "disagreements" | "recommendations" | "preview";
 
 export type FocusedRegion = "nav" | "content" | "palette" | "help";
 
@@ -246,4 +258,16 @@ export interface UiState {
   readonly isApplyingStudioPatch: boolean;
   readonly isRunningStudioTests: boolean;
   readonly studioActiveTab: "analysis" | "patches" | "diff" | "tests" | "sandbox";
+
+  // Prompt 18: Reports & Evidence Workspace (Workspace 8)
+  readonly reports: readonly Report[];
+  readonly selectedReportIndex: number;
+  readonly selectedReportId: string | null;
+  readonly selectedReport: Report | null;
+  readonly reportsActiveTab: ReportsActiveTab;
+  readonly reportFilterType: ReportType | "all";
+  readonly isGeneratingReport: boolean;
+  readonly isSimulatingCustomer: boolean;
+  readonly isExportingReport: boolean;
+  readonly exportedReportPath: string | null;
 }

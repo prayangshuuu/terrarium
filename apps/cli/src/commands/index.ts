@@ -17,3 +17,4 @@ export * from "./context-commands.ts";
 export * from "./budget-commands.ts";
 export * from "./observability-commands.ts";
 export * from "./studio-commands.ts";
+export * from "./report-commands.ts";

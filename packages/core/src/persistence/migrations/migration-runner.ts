@@ -43,6 +43,11 @@ import {
   MIGRATION_006_UP,
   MIGRATION_006_VERSION,
 } from "./006_telemetry_and_logs.ts";
+import {
+  MIGRATION_007_NAME,
+  MIGRATION_007_UP,
+  MIGRATION_007_VERSION,
+} from "./007_enhanced_reports_and_evidence.ts";
 
 export interface MigrationDefinition {
   readonly version: number;
@@ -80,6 +85,11 @@ export const REGISTERED_MIGRATIONS: readonly MigrationDefinition[] = [
     version: MIGRATION_006_VERSION,
     name: MIGRATION_006_NAME,
     up: MIGRATION_006_UP,
+  },
+  {
+    version: MIGRATION_007_VERSION,
+    name: MIGRATION_007_NAME,
+    up: MIGRATION_007_UP,
   },
 ];
 

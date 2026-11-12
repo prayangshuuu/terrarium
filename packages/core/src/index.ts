@@ -31,6 +31,7 @@ import { BudgetManager } from "./budget/index.ts";
 import { ModelRouter } from "./routing/index.ts";
 import { TelemetryManager } from "./observability/index.ts";
 import { createEngineeringStudioService, EngineeringStudioService } from "./studio/index.ts";
+import { createReportService, ReportService } from "./reports/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
@@ -48,6 +49,7 @@ export * from "./budget/index.ts";
 export * from "./routing/index.ts";
 export * from "./observability/index.ts";
 export * from "./studio/index.ts";
+export * from "./reports/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -70,6 +72,7 @@ export interface CoreEngine {
   readonly router: ModelRouter;
   readonly telemetry: TelemetryManager;
   readonly studio: EngineeringStudioService;
+  readonly reports: ReportService;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -88,6 +91,7 @@ export interface CreateCoreEngineOptions {
   readonly router?: ModelRouter;
   readonly telemetry?: TelemetryManager;
   readonly studio?: EngineeringStudioService;
+  readonly reports?: ReportService;
 }
 
 /**
@@ -171,6 +175,14 @@ export function createCoreEngine(
         repositories: db,
       });
 
+  const reports = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).reports
+    ? (optionsOrConfig as CreateCoreEngineOptions).reports!
+    : createReportService({
+        repository: db?.reports,
+        taskRepository: db?.tasks,
+        workspaceRoot: process.cwd(),
+      });
+
   return {
     config,
     db,
@@ -186,6 +198,7 @@ export function createCoreEngine(
     router,
     telemetry,
     studio,
+    reports,
     getState(): CoreEngineState {
       return {
         status,

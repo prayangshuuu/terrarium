@@ -16,23 +16,25 @@ describe("Database Migration Runner & Integrity", () => {
     const res = runner.runMigrations();
     expect(res.success).toBe(true);
     if (res.success) {
-      expect(res.data.length).toBe(6);
+      expect(res.data.length).toBe(7);
       expect(res.data[0]?.version).toBe(1);
       expect(res.data[1]?.version).toBe(2);
       expect(res.data[2]?.version).toBe(3);
       expect(res.data[3]?.version).toBe(4);
       expect(res.data[4]?.version).toBe(5);
       expect(res.data[5]?.version).toBe(6);
+      expect(res.data[6]?.version).toBe(7);
     }
 
     const applied = runner.getAppliedMigrations();
-    expect(applied.length).toBe(6);
+    expect(applied.length).toBe(7);
     expect(applied[0]?.version).toBe(1);
     expect(applied[1]?.version).toBe(2);
     expect(applied[2]?.version).toBe(3);
     expect(applied[3]?.version).toBe(4);
     expect(applied[4]?.version).toBe(5);
     expect(applied[5]?.version).toBe(6);
+    expect(applied[6]?.version).toBe(7);
     expect(applied[0]?.checksum).toBeDefined();
     expect(applied[1]?.checksum).toBeDefined();
     expect(applied[2]?.checksum).toBeDefined();

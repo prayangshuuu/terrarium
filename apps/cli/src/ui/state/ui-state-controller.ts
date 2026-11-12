@@ -49,6 +49,8 @@ import {
   type BoundedTestRunResult,
   type PatchApplicationResult,
   type PatchRollbackResult,
+  type Report,
+  type ReportType,
 } from "@terrarium/contracts";
 import type { CoreEngine } from "@terrarium/core";
 import {
@@ -62,6 +64,7 @@ import {
   type UiAlert,
   type UiState,
   type ViewMode,
+  type ReportsActiveTab,
 } from "./ui-state-types.js";
 
 export interface UiStateControllerOptions {
@@ -78,6 +81,7 @@ export interface UiStateControllerOptions {
   readonly initialPatches?: readonly CodeFilePatch[];
   readonly initialStudioAnalysis?: CodeAnalysisSummary | null;
   readonly initialStudioTestRun?: BoundedTestRunResult | null;
+  readonly initialReports?: readonly Report[];
 }
 
 export class UiStateController {
@@ -197,6 +201,18 @@ export class UiStateController {
       isApplyingStudioPatch: false,
       isRunningStudioTests: false,
       studioActiveTab: "analysis",
+
+      // Prompt 18: Reports & Evidence
+      reports: options.initialReports ?? [],
+      selectedReportIndex: 0,
+      selectedReportId: (options.initialReports ?? [])[0]?.id ?? null,
+      selectedReport: (options.initialReports ?? [])[0] ?? null,
+      reportsActiveTab: "overview",
+      reportFilterType: "all",
+      isGeneratingReport: false,
+      isSimulatingCustomer: false,
+      isExportingReport: false,
+      exportedReportPath: null,
     };
 
     // If initial task exists, initialize its detail
@@ -212,6 +228,7 @@ export class UiStateController {
       void this.loadSessions();
       void this.reconnectActivityFeed();
       void this.loadStudioData();
+      void this.loadReports();
     }
   }
 
@@ -1503,6 +1520,38 @@ export class UiStateController {
         },
       },
       {
+        id: "action-view-reports",
+        title: "View Reports & Intelligence",
+        subtitle: "Inspect multi-agent reports, provenance trails, and customer simulations",
+        shortcut: "[8]",
+        category: "view",
+        action: () => {
+          this.navigate("reports");
+        },
+      },
+      {
+        id: "action-simulate-customer",
+        title: "Simulate Customer Research",
+        subtitle: "Run synthetic customer persona research simulation",
+        category: "action",
+        action: () => {
+          this.navigate("reports");
+          void this.simulateCustomerResearch({
+            concept: "Terrarium Multi-Agent CLI and OpenTUI Orchestration Platform",
+          });
+        },
+      },
+      {
+        id: "action-export-report",
+        title: "Export Current Report to Workspace",
+        subtitle: "Save structured Markdown report to reports/ directory",
+        shortcut: "[e]",
+        category: "action",
+        action: () => {
+          void this.exportReport();
+        },
+      },
+      {
         id: "action-reconnect-activity",
         title: "Reconnect Activity Feed",
         subtitle: "Replay missed events from persistence log",
@@ -1901,6 +1950,150 @@ export class UiStateController {
       }
     } catch (err) {
       console.warn("Failed to attach engine listeners:", err);
+    }
+  }
+
+  // =========================================================================
+  // Prompt 18: Reports & Intelligence Methods
+  // =========================================================================
+
+  /**
+   * Loads reports from the engine's ReportService into UI state.
+   */
+  public async loadReports(): Promise<void> {
+    if (!this.engine?.reports) return;
+    try {
+      const res = await this.engine.reports.listReports();
+      if (res.success) {
+        const reports = res.data;
+        const currentSelectedId = this.state.selectedReportId;
+        const currentReport = reports.find((r) => r.id === currentSelectedId) ?? reports[0] ?? null;
+        const selectedIndex = currentReport ? reports.findIndex((r) => r.id === currentReport.id) : 0;
+        this.setState({
+          reports,
+          selectedReport: currentReport,
+          selectedReportId: currentReport?.id ?? null,
+          selectedReportIndex: Math.max(0, selectedIndex),
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to load reports:", err);
+    }
+  }
+
+  /**
+   * Switches active tab in Reports view.
+   */
+  public setReportsActiveTab(tab: ReportsActiveTab): void {
+    this.setState({ reportsActiveTab: tab });
+  }
+
+  /**
+   * Sets filter for report types.
+   */
+  public setReportFilterType(filter: ReportType | "all"): void {
+    this.setState({ reportFilterType: filter });
+  }
+
+  /**
+   * Selects a report by index.
+   */
+  public selectReport(index: number): void {
+    const reports = this.state.reports;
+    if (index >= 0 && index < reports.length) {
+      const rep = reports[index]!;
+      this.setState({
+        selectedReportIndex: index,
+        selectedReportId: rep.id,
+        selectedReport: rep,
+      });
+    }
+  }
+
+  /**
+   * Selects a report by ID.
+   */
+  public selectReportById(id: string): void {
+    const idx = this.state.reports.findIndex((r) => r.id === id);
+    if (idx !== -1) {
+      this.selectReport(idx);
+    }
+  }
+
+  /**
+   * Generates a report from task artifacts.
+   */
+  public async generateReport(options: {
+    taskId: string;
+    title: string;
+    reportType?: ReportType;
+  }): Promise<void> {
+    if (!this.engine?.reports) return;
+    this.setState({ isGeneratingReport: true });
+    try {
+      const res = await this.engine.reports.generateReport(options);
+      if (res.success) {
+        this.setAlert(`Generated report: ${res.data.title}`, "success");
+        await this.loadReports();
+        this.selectReportById(res.data.id);
+      } else {
+        this.setAlert(`Report generation failed: ${res.error.message}`, "error");
+      }
+    } finally {
+      this.setState({ isGeneratingReport: false });
+    }
+  }
+
+  /**
+   * Runs customer persona research simulation.
+   */
+  public async simulateCustomerResearch(options: {
+    concept: string;
+    scenario?: string;
+  }): Promise<void> {
+    if (!this.engine?.reports) return;
+    this.setState({ isSimulatingCustomer: true });
+    try {
+      const res = await this.engine.reports.simulateCustomerResearch(options);
+      if (res.success) {
+        this.setAlert(`Simulated customer research completed for ${res.data.title}`, "success");
+        await this.loadReports();
+        this.selectReportById(res.data.id);
+      } else {
+        this.setAlert(`Simulation failed: ${res.error.message}`, "error");
+      }
+    } finally {
+      this.setState({ isSimulatingCustomer: false });
+    }
+  }
+
+  /**
+   * Exports the selected or specified report to disk within the workspace root.
+   */
+  public async exportReport(reportId?: string, outputFilePath?: string): Promise<void> {
+    if (!this.engine?.reports) return;
+    const targetId = reportId || this.state.selectedReportId;
+    if (!targetId) {
+      this.setAlert("No report selected for export", "warning");
+      return;
+    }
+
+    const defaultPath = `reports/${targetId}.md`;
+    const targetPath = outputFilePath || defaultPath;
+
+    this.setState({ isExportingReport: true });
+    try {
+      const res = await this.engine.reports.exportReport(targetId, {
+        outputFilePath: targetPath,
+      });
+      if (res.success) {
+        this.setState({ exportedReportPath: res.data.exportedPath });
+        this.setAlert(`Exported report to: ${res.data.exportedPath}`, "success");
+      } else {
+        this.setAlert(`Export failed: ${res.error.message}`, "error");
+      }
+    } finally {
+      this.setState({ isExportingReport: false });
     }
   }
 
