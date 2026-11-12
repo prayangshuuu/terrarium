@@ -85,8 +85,15 @@ export function createProviderRegistry(
     return registry;
   }
 
+  const getCfg = (provider: any) => {
+    if (typeof options.config?.getProviderConfig === "function") {
+      return options.config.getProviderConfig(provider);
+    }
+    return (options.config as any)?.providers?.[provider];
+  };
+
   // 1. Anthropic Provider Adapter (Rank 1)
-  const anthropicCfg = options.config?.getProviderConfig("anthropic");
+  const anthropicCfg = getCfg("anthropic");
   registry.registerAdapter(
     new AnthropicProviderAdapter({
       provider: "anthropic",
@@ -97,7 +104,7 @@ export function createProviderRegistry(
   );
 
   // 2. Ollama Local Offline Provider Adapter (Rank 2)
-  const ollamaCfg = options.config?.getProviderConfig("ollama");
+  const ollamaCfg = getCfg("ollama");
   registry.registerAdapter(
     new OllamaProviderAdapter({
       provider: "ollama",
@@ -106,7 +113,7 @@ export function createProviderRegistry(
   );
 
   // 3. OpenAI Provider Adapter (Rank 3)
-  const openaiCfg = options.config?.getProviderConfig("openai");
+  const openaiCfg = getCfg("openai");
   registry.registerAdapter(
     new OpenAIProviderAdapter({
       provider: "openai",
@@ -118,7 +125,7 @@ export function createProviderRegistry(
   );
 
   // 4. Google Gemini Provider Adapter (Rank 4)
-  const geminiCfg = options.config?.getProviderConfig("gemini");
+  const geminiCfg = getCfg("gemini");
   registry.registerAdapter(
     new GeminiProviderAdapter({
       provider: "gemini",

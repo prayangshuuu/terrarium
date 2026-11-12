@@ -18,3 +18,4 @@ export * from "./budget-commands.ts";
 export * from "./observability-commands.ts";
 export * from "./studio-commands.ts";
 export * from "./report-commands.ts";
+export * from "./workflow-commands.ts";

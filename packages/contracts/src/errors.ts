@@ -51,6 +51,7 @@ export type TerrariumErrorCode =
   | "RESERVATION_EXHAUSTED"
   | "TELEMETRY_ERROR"
   | "SECRET_LEAK_DETECTED"
+  | "WORKFLOW_ERROR"
   | "INTERNAL_ERROR";
 
 export interface ValidationIssue {
@@ -918,6 +919,28 @@ export class SecretLeakDetectedError extends TerrariumError {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+/**
+ * Thrown when an end-to-end workflow error or invariant violation occurs.
+ */
+export class WorkflowError extends TerrariumError {
+  readonly workflowId?: string;
+  readonly stage?: string;
+
+  constructor(
+    message: string,
+    workflowId?: string,
+    stage?: string,
+    details?: Record<string, unknown>
+  ) {
+    super(message, "WORKFLOW_ERROR", { ...details, workflowId, stage });
+    this.name = "WorkflowError";
+    this.workflowId = workflowId;
+    this.stage = stage;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 
 
 

@@ -36,6 +36,7 @@ export * from "./telemetry.ts";
 export * from "./results.ts";
 export * from "./repositories.ts";
 export * from "./code.ts";
+export * from "./workflow.ts";
 
 // UI presentation and user-facing terminology
 export * from "./ui.ts";

@@ -32,6 +32,7 @@ import { ModelRouter } from "./routing/index.ts";
 import { TelemetryManager } from "./observability/index.ts";
 import { createEngineeringStudioService, EngineeringStudioService } from "./studio/index.ts";
 import { createReportService, ReportService } from "./reports/index.ts";
+import { EndToEndWorkflowPipeline } from "./workflow/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
@@ -50,6 +51,7 @@ export * from "./routing/index.ts";
 export * from "./observability/index.ts";
 export * from "./studio/index.ts";
 export * from "./reports/index.ts";
+export * from "./workflow/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -73,6 +75,7 @@ export interface CoreEngine {
   readonly telemetry: TelemetryManager;
   readonly studio: EngineeringStudioService;
   readonly reports: ReportService;
+  readonly workflow: EndToEndWorkflowPipeline;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -92,6 +95,7 @@ export interface CreateCoreEngineOptions {
   readonly telemetry?: TelemetryManager;
   readonly studio?: EngineeringStudioService;
   readonly reports?: ReportService;
+  readonly workflow?: EndToEndWorkflowPipeline;
 }
 
 /**
@@ -183,6 +187,19 @@ export function createCoreEngine(
         workspaceRoot: process.cwd(),
       });
 
+  const workflow = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).workflow
+    ? (optionsOrConfig as CreateCoreEngineOptions).workflow!
+    : new EndToEndWorkflowPipeline({
+        intake,
+        coordinator,
+        approvals,
+        reports,
+        registry,
+        studio,
+        budget,
+        repositories: db,
+      });
+
   return {
     config,
     db,
@@ -199,6 +216,7 @@ export function createCoreEngine(
     telemetry,
     studio,
     reports,
+    workflow,
     getState(): CoreEngineState {
       return {
         status,
