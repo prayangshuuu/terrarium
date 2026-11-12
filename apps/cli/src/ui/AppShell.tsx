@@ -191,8 +191,12 @@ export function AppShell({
   useKeyboard(handleKeyboard);
 
   return (
-    <ResponsiveContainer forcedWidth={forcedWidth} forcedHeight={forcedHeight}>
-      {({ width, height, isNarrow, isTooSmall }) => (
+    <ResponsiveContainer
+      forcedWidth={forcedWidth}
+      forcedHeight={forcedHeight}
+      isSidebarCollapsed={state.isSidebarCollapsed}
+    >
+      {({ width, height, isNarrow, isTooSmall, geometry }) => (
         <box
           flexDirection="column"
           width="100%"

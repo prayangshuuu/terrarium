@@ -21,4 +21,7 @@ export * from "./report-commands.ts";
 export * from "./workflow-commands.ts";
 export * from "./coding-agent-commands.ts";
 export * from "./claude-code-cli.ts";
+export * from "./antigravity-cli.ts";
+export * from "./cursor-agent-cli.ts";
+export * from "./ollama-cli.ts";
 export * from "./cli-dispatcher.ts";

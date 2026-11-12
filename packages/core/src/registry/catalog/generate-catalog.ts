@@ -8,6 +8,7 @@
 
 import {
   type AgentProfile,
+  type AgentCapability,
   type AgentDepartment,
   type AgentDomain,
   type AgentExpertiseBand,
@@ -382,7 +383,7 @@ Operate with extreme engineering rigor. Challenge ungrounded assumptions, cite c
       const cap1 = bp.keyCapabilities[1] ?? "Verification";
       const keyword0 = cap0.toLowerCase().split(" ")[0] ?? "analysis";
 
-      const capabilities = [
+      const capabilities: readonly AgentCapability[] = [
         {
           id: cap1Id,
           name: cap0,

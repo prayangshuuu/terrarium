@@ -33,7 +33,16 @@ import { TelemetryManager } from "./observability/index.ts";
 import { createEngineeringStudioService, EngineeringStudioService } from "./studio/index.ts";
 import { createReportService, ReportService } from "./reports/index.ts";
 import { EndToEndWorkflowPipeline } from "./workflow/index.ts";
-import { createCodingAgentRegistry, CodingAgentRegistry, createCodingAgentRouter, CodingAgentRouter, ClaudeCodeRunner } from "./coding-agents/index.ts";
+import {
+  createCodingAgentRegistry,
+  CodingAgentRegistry,
+  createCodingAgentRouter,
+  CodingAgentRouter,
+  ClaudeCodeRunner,
+  AntigravityRunner,
+  CursorAgentRunner,
+  OllamaRunner,
+} from "./coding-agents/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
@@ -81,6 +90,9 @@ export interface CoreEngine {
   readonly codingAgents: CodingAgentRegistry;
   readonly codingAgentRouter: CodingAgentRouter;
   readonly claudeCodeRunner: ClaudeCodeRunner;
+  readonly antigravityRunner: AntigravityRunner;
+  readonly cursorAgentRunner: CursorAgentRunner;
+  readonly ollamaRunner: OllamaRunner;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -216,6 +228,9 @@ export function createCoreEngine(
     : createCodingAgentRouter({ registry: codingAgents });
 
   const claudeCodeRunner = new ClaudeCodeRunner();
+  const antigravityRunner = new AntigravityRunner();
+  const cursorAgentRunner = new CursorAgentRunner();
+  const ollamaRunner = new OllamaRunner();
 
   return {
     config,
@@ -237,6 +252,9 @@ export function createCoreEngine(
     codingAgents,
     codingAgentRouter,
     claudeCodeRunner,
+    antigravityRunner,
+    cursorAgentRunner,
+    ollamaRunner,
     getState(): CoreEngineState {
       return {
         status,

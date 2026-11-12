@@ -377,6 +377,32 @@ export function SettingsView() {
           <box
             border={true}
             borderStyle="single"
+            borderColor={THEME_COLORS.statusInfo}
+            paddingX={2}
+            paddingY={1}
+            marginTop={1}
+            flexDirection="column"
+          >
+            <text fg={THEME_COLORS.statusInfo} attributes={TextAttributes.BOLD}>
+              FIRST-CLASS CLAUDE CODE LAUNCH (PROMPT 24):
+            </text>
+            <text fg={THEME_COLORS.fgPrimary}>
+              • Invocation: bun run terrarium -- claude code [options] [-- passthrough-args]
+            </text>
+            <text fg={THEME_COLORS.fgSecondary}>
+              • Default Policy: standard (Claude prompts on filesystem/network/process actions)
+            </text>
+            <text fg={THEME_COLORS.fgSecondary}>
+              • Dangerous Mode: isolated_bypass (--dangerously-skip-permissions)
+            </text>
+            <text fg={THEME_COLORS.fgMuted}>
+              • Isolation Requirements: verified isolated workspace boundary, root/home/system paths rejected, environment variable scrubbing
+            </text>
+          </box>
+
+          <box
+            border={true}
+            borderStyle="single"
             borderColor={THEME_COLORS.statusDanger}
             paddingX={2}
             paddingY={1}

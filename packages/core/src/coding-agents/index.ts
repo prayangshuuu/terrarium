@@ -16,3 +16,6 @@ export * from "./coding-agent-registry.ts";
 export * from "./coding-agent-router.ts";
 export * from "./isolation-verifier.ts";
 export * from "./claude-code-runner.ts";
+export * from "./antigravity-runner.ts";
+export * from "./cursor-agent-runner.ts";
+export * from "./ollama-runner.ts";

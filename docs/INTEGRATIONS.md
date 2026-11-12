@@ -90,20 +90,48 @@ In accordance with Prompt 19 ("Rank integrations by user value, risk, maintenanc
 - **How to Disconnect / Disable**:
   Unset `GEMINI_API_KEY` and `GOOGLE_API_KEY`.
 
-### 4. Claude Code CLI Adapter (Rank 5 — Specialist Coding-Agent Subprocess)
-- **Primary Value**: Bridges local Claude Code CLI capabilities (`claude -p <prompt>`) into Terrarium tasks.
+### 4. First-Class Claude Code Integration (Rank 5 — Specialist Coding-Agent Subprocess)
+- **Primary Value**: Bridges local Claude Code CLI capabilities into Terrarium tasks and provides a first-class user-facing launch command.
+- **Exact Invocation**:
+  ```bash
+  bun run terrarium -- claude code [options] [-- passthrough-args]
+  ```
+- **Supported Options**:
+  - `--dangerously-skip-permissions`: Requests Claude Code dangerous-permissions mode (bypasses interactive permission prompts inside Claude Code). Requires verified isolation boundary and operator confirmation.
+  - `--yes`, `-y`, `--confirm-isolated-bypass`: Confirms the dangerous-permissions security notice non-interactively (mandatory for non-TTY / CI execution).
+  - `--workspace <path>`, `--isolation-dir <path>`: Specifies workspace root to isolate. Defaults to current working directory (`process.cwd()`).
+  - `--executable <path>`: Overrides binary path to Claude Code executable.
+  - `--dry-run`: Performs discovery, version probing, environment sanitization, and isolation verification without spawning the process.
+  - `--help`, `-h`: Shows Claude Code help (forwarded to Claude Code if sole argument).
+  - `bun run terrarium -- claude --help`: Displays Terrarium's Claude launcher help and security policies.
+- **Discovery Strategy**:
+  1. Checks user-specified `--executable <path>` or `CLAUDE_CODE_EXECUTABLE` environment variable.
+  2. Resolves binary via system `PATH` using `which claude` (macOS/Linux) or `where.exe claude` (Windows).
+  3. Probes standard user directories (`~/.local/bin/claude`, `~/.npm-global/bin/claude`, `/usr/local/bin/claude`, `/opt/homebrew/bin/claude`).
+  4. Executes `<path> --version` to verify executable compatibility (verified with `v2.1.319`).
+- **Security Architecture & Isolation Preconditions**:
+  1. **Standard Policy Default**: By default, Claude Code runs with normal interactive permissions (`--dangerously-skip-permissions` is omitted). The operator must explicitly pass `--dangerously-skip-permissions`.
+  2. **Isolation Boundary Verification**: When dangerous-permissions mode is requested, Terrarium verifies the isolation boundary before spawning:
+     - Root directory (`/`), user home (`~`), and critical system paths (`/bin`, `/sbin`, `/usr`, `/etc`, `/var`, `/System`, `/Windows`) are strictly forbidden.
+     - The workspace directory must exist and be accessible.
+     - Presence of exposed sensitive credential files (`.ssh`, `.aws`, `.gnupg`, private keys) directly inside the workspace triggers an immediate failure.
+  3. **Environment Scrubbing**: Sensitive ambient credentials (e.g., `AWS_ACCESS_KEY_ID`, `GITHUB_TOKEN`, `GCP_KEY`) are stripped. Only strictly allowlisted environment variables (`PATH`, `HOME`, `USER`, `TERM`, `ANTHROPIC_API_KEY`, etc.) are forwarded.
+  4. **Fail-Closed Gate**: If isolation verification fails, Terrarium immediately aborts execution with exit code 1 and outputs structured diagnostics.
+  5. **Zero Shell Interpolation**: All subprocess invocations use strict argument arrays (`Bun.spawn([resolvedPath, ...args])`). No shell concatenation or string expansion is performed.
+  6. **Process Lifecycle & Signal Forwarding**: Cleanly captures `SIGINT` and `SIGTERM` signals and forwards them to the child process to prevent zombie or orphaned subprocesses.
+  7. **Zero Emoji Terminal Standard**: All diagnostics, confirmation banners, and help text adhere to Terrarium's 100% zero-emoji terminal typography.
 - **How to Connect**:
   1. Install the CLI on your host machine:
      ```bash
      npm install -g @anthropic-ai/claude-code
+     # or native installer: curl -fsSL https://claude.ai/install.sh | bash
      ```
-  2. Verify the binary is in PATH:
+  2. Verify binary detection:
      ```bash
-     which claude
+     bun run terrarium -- claude code --dry-run
      ```
-  3. Terrarium automatically detects the binary and wraps commands with timeout and sandbox constraints.
 - **How to Disconnect / Disable**:
-  Uninstall or remove the binary from PATH. If missing, Terrarium returns a typed `ProviderNotFoundError` with installation instructions without crashing.
+  Uninstall or remove the binary from PATH. If missing, Terrarium provides actionable diagnostics with installation instructions without crashing.
 
 ---
 

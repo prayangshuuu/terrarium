@@ -106,7 +106,9 @@ In compliance with project auditing standards, every subsystem in TERRARIUM is l
 | **Report Generation & Provenance** | `[IMPLEMENTED]` | Evidence classification, disagreement preservation, and Markdown export. |
 | **Synthetic Customer Simulation** | `[IMPLEMENTED]` | Persona-based feedback exploration with mandatory simulation disclaimers. |
 | **Specialist Provider Adapters** | `[IMPLEMENTED]` | Anthropic (Tier 1), Ollama (Offline Tier 1), OpenAI (Tier 1), Gemini (Tier 2). |
-| **Claude Code CLI Subprocess Adapter** | `[EXPERIMENTAL]` | Sandboxed batch subprocess execution (`-p`) constrained to workspace `cwd`. |
+| **First-Class Claude Code Integration** | `[IMPLEMENTED]` | Exact CLI invocation (`bun run terrarium -- claude code`), explicit dangerous-permissions mode, and fail-closed isolation gate. |
+| **700+ Agent Profile Ecosystem** | `[IMPLEMENTED]` | 750+ schema-valid profiles across 50 canonical domains, zero duplicates, rich metadata, 100% zero emojis. |
+| **Experimental Coding Agent Bridges** | `[EXPERIMENTAL]` | Native Linux namespace/bwrap containers and secondary coding agent bridges. |
 | **Multi-Node Distributed Clustering** | `[PLANNED]` | Local single-node multi-process supported; distributed cluster planned for v2. |
 | **Web Studio GUI** | `[PLANNED]` | Terminal TUI implemented; future web UI will consume identical `@terrarium/core` state. |
 
@@ -114,9 +116,16 @@ In compliance with project auditing standards, every subsystem in TERRARIUM is l
 
 ## 5. CLI Command Reference
 
-TERRARIUM provides both full-screen TUI views and scriptable command-line utilities:
+TERRARIUM provides full-screen TUI views, scriptable command-line utilities, and first-class coding-agent process execution:
 
 ```bash
+# First-Class Claude Code Launch (Prompt 24)
+bun run terrarium -- claude code                     # Standard permission mode (interactive prompts preserved)
+bun run terrarium -- claude code --help              # Passthrough help from Claude Code CLI
+bun run terrarium -- claude code --dry-run           # Inspect executable path, argv, and isolation verification
+bun run terrarium -- claude code --dangerously-skip-permissions --yes  # Explicit dangerous mode (requires verified sandbox)
+bun run terrarium -- claude --help                   # Terrarium Claude Code launcher options and safety policies
+
 # Workflow Execution
 terrarium workflow run <prompt> [--auto-approve] [--budget <usd>] [--json]
 terrarium workflow resume <workflow-id> [--approve | --reject]

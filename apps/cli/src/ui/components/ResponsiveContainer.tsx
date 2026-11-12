@@ -1,32 +1,37 @@
 /**
  * apps/cli/src/ui/components/ResponsiveContainer.tsx
  *
- * Terminal dimension observer, responsive layout manager, and narrow display adapter.
+ * Terminal dimension observer, responsive layout manager, and geometry engine adapter.
  * Contributed by A4 (Senior CLI/TUI Designer) & A5 (Product Interface Designer).
  */
 
 import React, { type ReactNode } from "react";
 import { useTerminalDimensions } from "@opentui/react";
 import { TextAttributes } from "@opentui/core";
-import { LAYOUT_METRICS } from "../tokens/index.js";
 import { THEME_COLORS } from "../tokens/colors.js";
 import { GLYPHS } from "../tokens/glyphs.js";
+import { calculateLayoutGeometry, type TerminalGeometry } from "../layout/geometry-engine.js";
+
+export interface ResponsiveContainerDimensions {
+  readonly width: number;
+  readonly height: number;
+  readonly isNarrow: boolean;
+  readonly isTooSmall: boolean;
+  readonly geometry: TerminalGeometry;
+}
 
 export interface ResponsiveContainerProps {
-  readonly children: (dimensions: {
-    width: number;
-    height: number;
-    isNarrow: boolean;
-    isTooSmall: boolean;
-  }) => ReactNode;
+  readonly children: (dimensions: ResponsiveContainerDimensions) => ReactNode;
   readonly forcedWidth?: number;
   readonly forcedHeight?: number;
+  readonly isSidebarCollapsed?: boolean;
 }
 
 export function ResponsiveContainer({
   children,
   forcedWidth,
   forcedHeight,
+  isSidebarCollapsed = false,
 }: ResponsiveContainerProps) {
   let terminalWidth = 100;
   let terminalHeight = 30;
@@ -38,14 +43,20 @@ export function ResponsiveContainer({
       terminalHeight = dims.height;
     }
   } catch {
-    // Fallback if not inside OpenTUI active terminal runtime (e.g. standard tests)
+    // Fallback if not inside OpenTUI active terminal runtime (e.g. test environment)
   }
 
   const width = forcedWidth ?? terminalWidth;
   const height = forcedHeight ?? terminalHeight;
 
-  const isTooSmall = width < LAYOUT_METRICS.minTerminalWidth || height < LAYOUT_METRICS.minTerminalHeight;
-  const isNarrow = width < LAYOUT_METRICS.narrowTerminalWidth;
+  const geometry = calculateLayoutGeometry({
+    terminalWidth: width,
+    terminalHeight: height,
+    isSidebarCollapsed,
+  });
+
+  const isTooSmall = geometry.isTooSmall || width < 80 || height < 20;
+  const isNarrow = geometry.isCompact;
 
   return (
     <box flexDirection="column" flexGrow={1} width="100%" height="100%">
@@ -64,7 +75,7 @@ export function ResponsiveContainer({
         </box>
       )}
 
-      {children({ width, height, isNarrow, isTooSmall })}
+      {children({ width, height, isNarrow, isTooSmall, geometry })}
     </box>
   );
 }

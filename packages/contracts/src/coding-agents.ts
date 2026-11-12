@@ -16,10 +16,12 @@ import { isRecord, validateString, validateEnum, validateArray, validateBoolean,
  */
 export const CODING_AGENT_TYPES = [
   "claude_code",
+  "antigravity",
+  "cursor",
+  "ollama_cli",
   "codex_cli",
   "opencode",
   "gemini_cli",
-  "cursor",
   "aider",
   "custom_subprocess",
 ] as const;
