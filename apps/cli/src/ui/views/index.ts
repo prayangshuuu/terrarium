@@ -7,3 +7,5 @@
 export * from "./PlaceholderView.js";
 export * from "./OverviewView.js";
 export * from "./EcosystemView.js";
+export * from "./TasksView.js";
+export * from "./ConversationsView.js";

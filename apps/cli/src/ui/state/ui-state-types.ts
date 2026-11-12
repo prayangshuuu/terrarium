@@ -15,6 +15,26 @@ import {
   type AgentEcosystemFilter,
   type AgentSelectionRationale,
   type OverviewExecutionItem,
+  type Task,
+  type TaskStatus,
+  type TaskPriority,
+  type TaskStep,
+  type TaskFilterState,
+  type TaskAvailableActions,
+  getAvailableTaskActions,
+  type TaskPlan,
+  type Execution,
+  type ApprovalRequest,
+  type Artifact,
+  type Session,
+  type SessionMode,
+  type SessionStatus,
+  type Message,
+  type MessageRole,
+  type MessageSenderType,
+  type ConversationMessageUI,
+  type ActivityFeedEventUI,
+  type ActivityFeedState,
 } from "@terrarium/contracts";
 
 export {
@@ -27,6 +47,26 @@ export {
   type AgentEcosystemFilter,
   type AgentSelectionRationale,
   type OverviewExecutionItem,
+  type Task,
+  type TaskStatus,
+  type TaskPriority,
+  type TaskStep,
+  type TaskFilterState,
+  type TaskAvailableActions,
+  getAvailableTaskActions,
+  type TaskPlan,
+  type Execution,
+  type ApprovalRequest,
+  type Artifact,
+  type Session,
+  type SessionMode,
+  type SessionStatus,
+  type Message,
+  type MessageRole,
+  type MessageSenderType,
+  type ConversationMessageUI,
+  type ActivityFeedEventUI,
+  type ActivityFeedState,
 };
 
 export type FocusedRegion = "nav" | "content" | "palette" | "help";
@@ -79,6 +119,55 @@ export function createDefaultOverviewSummary(
   };
 }
 
+/**
+ * Detailed task inspection data package.
+ */
+export interface TaskDetailData {
+  readonly task: Task;
+  readonly assignedProfile?: AgentProfile;
+  readonly plan?: TaskPlan;
+  readonly steps: readonly TaskStep[];
+  readonly executions: readonly Execution[];
+  readonly approvals: readonly ApprovalRequest[];
+  readonly artifacts: readonly Artifact[];
+  readonly availableActions: TaskAvailableActions;
+  readonly budgetSummary?: {
+    readonly usedTokens: number;
+    readonly usedSpendUsd: number;
+    readonly maxSpendUsd?: number;
+  };
+}
+
+/**
+ * Task creation form input.
+ */
+export interface TaskCreateFormInput {
+  readonly title: string;
+  readonly description: string;
+  readonly department: AgentDepartment;
+  readonly priority: TaskPriority;
+  readonly budgetLimitUsd?: number;
+}
+
+export function createDefaultTaskFilter(): TaskFilterState {
+  return {
+    searchQuery: "",
+    status: "all",
+    priority: "all",
+    department: "all",
+  };
+}
+
+export function createDefaultActivityFeedState(): ActivityFeedState {
+  return {
+    items: [],
+    isConnected: true,
+    lastSeenTimestamp: undefined,
+    lastSeenSequenceNumber: undefined,
+    replayedMissedEventsCount: 0,
+  };
+}
+
 export interface UiState {
   readonly activeWorkspace: WorkspaceId;
   readonly history: readonly WorkspaceId[];
@@ -116,4 +205,24 @@ export interface UiState {
   readonly activeExecutions: readonly OverviewExecutionItem[];
   readonly selectedAgentIds: readonly string[];
   readonly pausedAgentIds: readonly string[];
+
+  // Prompt 16: Task Manager (list, detail, create, plan)
+  readonly tasks: readonly Task[];
+  readonly taskFilter: TaskFilterState;
+  readonly selectedTaskId: string | null;
+  readonly selectedTaskIndex: number;
+  readonly selectedTaskDetail: TaskDetailData | null;
+  readonly taskViewMode: "list" | "detail" | "create";
+  readonly isPlanningTask: boolean;
+
+  // Prompt 16: Conversations & Multi-Agent Debates
+  readonly sessions: readonly Session[];
+  readonly selectedSessionId: string | null;
+  readonly selectedSessionIndex: number;
+  readonly sessionMessages: readonly ConversationMessageUI[];
+  readonly chatDraftText: string;
+  readonly isSendingMessage: boolean;
+
+  // Prompt 16: Activity Feed & Missed-Event Replay
+  readonly activityFeed: ActivityFeedState;
 }

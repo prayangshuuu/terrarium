@@ -80,7 +80,7 @@ describe("OpenTUI Application Shell & Navigation Suite (A4 & A5)", () => {
 
     let frame = setup.captureCharFrame();
     expect(frame).toContain("Task Manager");
-    expect(frame).toContain("Prompt 16");
+    expect(frame).toContain("TASK MANAGER");
 
     // Press '6' for Engineering Studio
     setup.mockInput.pressKey("6");

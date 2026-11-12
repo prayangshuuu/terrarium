@@ -6,12 +6,14 @@
  * Aligns with PLAN.md Section 16 (CLI & Terminal UX) and Section 2 (Product Identity & Principles).
  */
 
-import { type TaskStatus } from "./tasks.ts";
+import { type TaskStatus, type TaskPriority } from "./tasks.ts";
 import { type ExecutionStatus } from "./execution.ts";
 import { type ApprovalStatus } from "./approvals.ts";
 import { type AgentDepartment } from "./departments.ts";
 import { type ToolRiskLevel } from "./tools.ts";
 import { type AgentLifecycleStatus } from "./agent.ts";
+import { type EventType, type EventSource } from "./events.ts";
+import { type MessageRole, type MessageSenderType } from "./session.ts";
 import {
   type MemoryCategory,
   type MemoryConfidence,
@@ -117,6 +119,40 @@ export const TASK_STATUS_UI: Readonly<Record<TaskStatus, StatusUIMetadata>> = {
     glyph: "▲",
     color: "red",
     description: "Dependency, permission, or budget threshold blocked execution",
+  },
+};
+
+/**
+ * Standard UI metadata for TaskPriority.
+ */
+export const TASK_PRIORITY_UI: Readonly<Record<TaskPriority, StatusUIMetadata>> = {
+  low: {
+    label: "Low",
+    shortLabel: "LOW",
+    glyph: "▽",
+    color: "gray",
+    description: "Low priority execution",
+  },
+  medium: {
+    label: "Medium",
+    shortLabel: "MED",
+    glyph: "○",
+    color: "cyan",
+    description: "Standard operational priority",
+  },
+  high: {
+    label: "High",
+    shortLabel: "HIGH",
+    glyph: "▲",
+    color: "yellow",
+    description: "Elevated execution priority",
+  },
+  urgent: {
+    label: "Urgent",
+    shortLabel: "URGT",
+    glyph: "⚡",
+    color: "red",
+    description: "Immediate critical execution",
   },
 };
 
@@ -736,6 +772,91 @@ export interface AgentEcosystemFilter {
   readonly department: AgentDepartment | "all";
   readonly lifecycleStatus: AgentLifecycleStatus | "all";
 }
+
+/**
+ * Available safe execution actions for a task given its current lifecycle state (Prompt 16).
+ * Aligns with assertTaskTransition and PLAN.md Section 5.4.
+ */
+export interface TaskAvailableActions {
+  readonly canPause: boolean;
+  readonly canResume: boolean;
+  readonly canCancel: boolean;
+  readonly canRetry: boolean;
+}
+
+/**
+ * Returns which execution control operations are legal for a given task status.
+ */
+export function getAvailableTaskActions(task: { status: TaskStatus }): TaskAvailableActions {
+  return {
+    canPause: task.status === "running",
+    canResume: task.status === "waiting_for_input" || task.status === "blocked",
+    canCancel: task.status !== "completed" && task.status !== "cancelled",
+    canRetry: task.status === "failed" || task.status === "cancelled",
+  };
+}
+
+/**
+ * Filter criteria for the Task Manager workspace.
+ */
+export interface TaskFilterState {
+  readonly searchQuery: string;
+  readonly status: TaskStatus | "all";
+  readonly priority: TaskPriority | "all";
+  readonly department: AgentDepartment | "all";
+}
+
+/**
+ * Activity feed item contract for event-backed observable activity stream (Prompt 16).
+ */
+export interface ActivityFeedEventUI {
+  readonly id: string;
+  readonly eventType: EventType;
+  readonly timestamp: string;
+  readonly sequenceNumber?: number;
+  readonly source: EventSource;
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly summary: string;
+  readonly level: "info" | "warn" | "error" | "debug";
+  readonly glyph: string;
+  readonly color: TerminalColorName;
+}
+
+/**
+ * Activity feed connection and replay state contract (Prompt 16).
+ */
+export interface ActivityFeedState {
+  readonly items: readonly ActivityFeedEventUI[];
+  readonly isConnected: boolean;
+  readonly lastSeenTimestamp?: string;
+  readonly lastSeenSequenceNumber?: number;
+  readonly replayedMissedEventsCount: number;
+}
+
+/**
+ * Enhanced UI conversation message representation separating user, agent, tool, and system messages.
+ * Includes preserved disagreements, uncertainty level, and simulated customer feedback labels (Prompt 16).
+ */
+export interface ConversationMessageUI {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly senderId: string;
+  readonly senderName: string;
+  readonly senderRole?: string;
+  readonly senderDepartment?: AgentDepartment;
+  readonly senderType: MessageSenderType;
+  readonly role: MessageRole | "tool";
+  readonly content: string;
+  readonly timestamp: string;
+  readonly isSimulatedPersona: boolean;
+  readonly disagreements?: readonly { readonly specialist: string; readonly argument: string }[];
+  readonly uncertaintyLevel?: "low" | "medium" | "high" | "critical";
+  readonly uncertaintyExplanation?: string;
+  readonly citations?: readonly { readonly title: string; readonly pathOrUri: string }[];
+  readonly toolCalls?: readonly { readonly name: string; readonly riskLevel: ToolRiskLevel; readonly isConsequential: boolean }[];
+}
+
 
 
 

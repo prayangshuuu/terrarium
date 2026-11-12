@@ -20,13 +20,40 @@ import {
   type OverviewExecutionItem,
   type OverviewTaskItem,
   type OverviewApprovalItem,
+  type Task,
+  type TaskStatus,
+  type TaskPriority,
+  type TaskStep,
+  type TaskFilterState,
+  type TaskAvailableActions,
+  getAvailableTaskActions,
+  assertTaskTransition,
+  type TaskPlan,
+  type PlanStep,
+  type Execution,
+  type ApprovalRequest,
+  type Artifact,
+  type Session,
+  type SessionMode,
+  type SessionStatus,
+  type Message,
+  type MessageRole,
+  type MessageSenderType,
+  type ConversationMessageUI,
+  type ActivityFeedEventUI,
+  type ActivityFeedState,
   resolveAgentLifecycleStatus,
+  type TerminalColorName,
 } from "@terrarium/contracts";
 import type { CoreEngine } from "@terrarium/core";
 import {
   type CommandPaletteItem,
   createDefaultOverviewSummary,
+  createDefaultTaskFilter,
+  createDefaultActivityFeedState,
   type FocusedRegion,
+  type TaskDetailData,
+  type TaskCreateFormInput,
   type UiAlert,
   type UiState,
   type ViewMode,
@@ -39,6 +66,10 @@ export interface UiStateControllerOptions {
   readonly environment?: "development" | "production" | "test";
   readonly initialProfiles?: readonly AgentProfile[];
   readonly initialOverviewSummary?: Partial<OverviewSummary>;
+  readonly initialTasks?: readonly Task[];
+  readonly initialSessions?: readonly Session[];
+  readonly initialMessages?: readonly ConversationMessageUI[];
+  readonly initialActivityFeed?: readonly ActivityFeedEventUI[];
 }
 
 export class UiStateController {
@@ -66,8 +97,14 @@ export class UiStateController {
       }
     }
 
+    const initialTasks = options.initialTasks ?? [];
+    const activeTasksCount = initialTasks.filter(
+      (t) => t.status === "running" || t.status === "queued"
+    ).length;
+
     const initialOverview: OverviewSummary = {
       ...baseOverview,
+      activeTaskCount: activeTasksCount,
       departmentCounts: deptCounts,
       simulatedPersonaCount: simulatedCount,
       ...(options.initialOverviewSummary ?? {}),
@@ -75,6 +112,10 @@ export class UiStateController {
         options.initialOverviewSummary?.registeredProfileCount ??
         (initialProfiles.length > 0 ? initialProfiles.length : baseOverview.registeredProfileCount),
     };
+
+    const initialSessions = options.initialSessions ?? [];
+    const initialMessages = options.initialMessages ?? [];
+    const initialActivity = options.initialActivityFeed ?? [];
 
     this.state = {
       activeWorkspace: initialWorkspace,
@@ -113,12 +154,43 @@ export class UiStateController {
       activeExecutions: initialOverview.recentExecutions ?? [],
       selectedAgentIds: [],
       pausedAgentIds: [],
+
+      // Prompt 16 Task Manager State
+      tasks: initialTasks,
+      taskFilter: createDefaultTaskFilter(),
+      selectedTaskId: initialTasks[0]?.id ?? null,
+      selectedTaskIndex: 0,
+      selectedTaskDetail: null,
+      taskViewMode: "list",
+      isPlanningTask: false,
+
+      // Prompt 16 Conversations State
+      sessions: initialSessions,
+      selectedSessionId: initialSessions[0]?.id ?? null,
+      selectedSessionIndex: 0,
+      sessionMessages: initialMessages,
+      chatDraftText: "",
+      isSendingMessage: false,
+
+      // Prompt 16 Activity Feed State
+      activityFeed: {
+        ...createDefaultActivityFeedState(),
+        items: initialActivity,
+      },
     };
+
+    // If initial task exists, initialize its detail
+    if (initialTasks[0]) {
+      void this.buildTaskDetail(initialTasks[0]);
+    }
 
     if (this.engine) {
       this.bindEngineEvents();
       void this.refreshOverview();
       void this.loadEcosystem();
+      void this.loadTasks();
+      void this.loadSessions();
+      void this.reconnectActivityFeed();
     }
   }
 
@@ -158,7 +230,7 @@ export class UiStateController {
     }
 
     if (this.state.activeWorkspace === workspace) {
-      // Already on this workspace; ensure palette/help/agent detail are closed
+      // Already on this workspace; ensure overlays are dismissed
       if (this.state.isCommandPaletteOpen || this.state.isHelpModalOpen || this.state.isAgentDetailOpen) {
         this.setState({
           isCommandPaletteOpen: false,
@@ -187,12 +259,16 @@ export class UiStateController {
   }
 
   /**
-   * Navigates back in history, or dismisses an open overlay (detail modal, palette, or help).
-   * Returns true if a back action occurred, false if history is at root.
+   * Navigates back in history, or dismisses an open overlay.
    */
   public goBack(): boolean {
     if (this.state.isAgentDetailOpen) {
       this.closeAgentDetail();
+      return true;
+    }
+
+    if (this.state.activeWorkspace === "tasks" && this.state.taskViewMode !== "list") {
+      this.setTaskViewMode("list");
       return true;
     }
 
@@ -211,7 +287,7 @@ export class UiStateController {
     }
 
     const nextHistory = [...this.state.history];
-    nextHistory.pop(); // Pop current
+    nextHistory.pop();
     const previous = nextHistory[nextHistory.length - 1];
 
     if (previous) {
@@ -385,9 +461,6 @@ export class UiStateController {
     this.setState({ isAgentDetailOpen: false });
   }
 
-  /**
-   * Records a demand-based candidate selection rationale for an agent.
-   */
   public recordSelectionRationale(rationale: AgentSelectionRationale): void {
     const nextRationales = {
       ...this.state.selectionRationales,
@@ -403,9 +476,6 @@ export class UiStateController {
     });
   }
 
-  /**
-   * Computes the operational lifecycle status for an agent profile.
-   */
   public getAgentLifecycleStatus(profile: AgentProfile): AgentLifecycleStatus {
     const isExecuting = this.state.activeExecutions.some(
       (e) => (e.agentProfileId === profile.id || e.agentSlug === profile.slug) && e.status === "running"
@@ -416,28 +486,20 @@ export class UiStateController {
     return resolveAgentLifecycleStatus(profile, { isExecuting, isPaused, isSelected });
   }
 
-  /**
-   * Filters ecosystem profiles by current search query, department, and lifecycle status.
-   */
   public getFilteredEcosystemProfiles(): readonly AgentProfile[] {
     const { searchQuery, department, lifecycleStatus } = this.state.ecosystemFilter;
     const q = searchQuery.trim().toLowerCase();
 
     return this.state.ecosystemProfiles.filter((profile) => {
-      // 1. Department filter
       if (department !== "all" && profile.department !== department) {
         return false;
       }
-
-      // 2. Lifecycle status filter
       if (lifecycleStatus !== "all") {
         const status = this.getAgentLifecycleStatus(profile);
         if (status !== lifecycleStatus) {
           return false;
         }
       }
-
-      // 3. Search query
       if (q) {
         const matchesName = profile.name.toLowerCase().includes(q);
         const matchesRole = profile.role.toLowerCase().includes(q);
@@ -456,21 +518,17 @@ export class UiStateController {
           return false;
         }
       }
-
       return true;
     });
   }
 
-  /**
-   * Asynchronously loads profiles from engine registry or database into the ecosystem state.
-   */
   public async loadEcosystem(): Promise<void> {
     if (!this.engine) return;
 
     try {
       let profiles: readonly AgentProfile[] = [];
 
-      if (this.engine.db) {
+      if (this.engine.db?.agentProfiles) {
         const res = await this.engine.db.agentProfiles.list();
         if (res.success && Array.isArray(res.data)) {
           profiles = res.data;
@@ -493,10 +551,724 @@ export class UiStateController {
     }
   }
 
-  /**
-   * Fetches real state from CoreEngine components to populate OverviewSummary (A2 & A3).
-   * Guaranteed: NO fabricated or invented metrics.
-   */
+  // =========================================================================
+  // Task Manager & Execution Controls (Prompt 16)
+  // =========================================================================
+
+  public async loadTasks(): Promise<void> {
+    if (!this.engine?.db?.tasks) return;
+
+    try {
+      const res = await this.engine.db.tasks.list();
+      if (res.success && Array.isArray(res.data)) {
+        this.setState({ tasks: res.data });
+        if (this.state.selectedTaskId) {
+          const updated = res.data.find((t) => t.id === this.state.selectedTaskId);
+          if (updated) {
+            void this.buildTaskDetail(updated);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load tasks:", err);
+    }
+  }
+
+  public setTaskViewMode(mode: "list" | "detail" | "create"): void {
+    this.setState({ taskViewMode: mode });
+  }
+
+  public setTaskFilter(filter: Partial<TaskFilterState>): void {
+    this.setState({
+      taskFilter: { ...this.state.taskFilter, ...filter },
+      selectedTaskIndex: 0,
+    });
+  }
+
+  public resetTaskFilter(): void {
+    this.setState({
+      taskFilter: createDefaultTaskFilter(),
+      selectedTaskIndex: 0,
+    });
+  }
+
+  public setTaskIndex(index: number): void {
+    const filtered = this.getFilteredTasks();
+    if (filtered.length === 0) {
+      this.setState({ selectedTaskIndex: 0, selectedTaskId: null });
+      return;
+    }
+    const safeIdx = Math.max(0, Math.min(filtered.length - 1, index));
+    const target = filtered[safeIdx];
+    this.setState({
+      selectedTaskIndex: safeIdx,
+      selectedTaskId: target ? target.id : null,
+    });
+  }
+
+  public getFilteredTasks(): readonly Task[] {
+    const { searchQuery, status, priority, department } = this.state.taskFilter;
+    const q = searchQuery.trim().toLowerCase();
+
+    return this.state.tasks.filter((task) => {
+      if (status !== "all" && task.status !== status) return false;
+      if (priority !== "all" && task.priority !== priority) return false;
+      if (department !== "all" && task.department !== department) return false;
+      if (q) {
+        const matchesTitle = task.title.toLowerCase().includes(q);
+        const matchesDesc = task.description.toLowerCase().includes(q);
+        const matchesId = task.id.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesDesc && !matchesId) return false;
+      }
+      return true;
+    });
+  }
+
+  public async selectTask(taskId: string | null): Promise<void> {
+    if (!taskId) {
+      this.setState({ selectedTaskId: null, selectedTaskDetail: null, taskViewMode: "list" });
+      return;
+    }
+
+    const task = this.state.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    this.setState({ selectedTaskId: taskId, taskViewMode: "detail" });
+    await this.buildTaskDetail(task);
+  }
+
+  private async buildTaskDetail(task: Task): Promise<void> {
+    let assignedProfile: AgentProfile | undefined;
+    let plan: TaskPlan | undefined;
+    let steps: readonly TaskStep[] = [];
+    let executions: readonly Execution[] = [];
+    let approvals: readonly ApprovalRequest[] = [];
+    let artifacts: readonly Artifact[] = [];
+    let budgetSummary: { usedTokens: number; usedSpendUsd: number; maxSpendUsd?: number } | undefined;
+
+    if (task.assignedAgentId) {
+      assignedProfile = this.state.ecosystemProfiles.find((p) => p.id === task.assignedAgentId);
+      if (!assignedProfile && this.engine?.registry) {
+        const pRes = await this.engine.registry.inspect(task.assignedAgentId);
+        if (pRes.success) assignedProfile = pRes.data;
+      }
+    }
+
+    if (this.engine?.db) {
+      const db = this.engine.db;
+      // Plan
+      if (db.plans) {
+        const planRes = await db.plans.findByTaskId(task.id);
+        if (planRes.success && planRes.data) plan = planRes.data;
+      }
+
+      // Steps
+      const stepRes = await db.steps.listByTaskId(task.id);
+      if (stepRes.success) steps = stepRes.data;
+
+      // Executions
+      const execRes = await db.executions.listByTaskId(task.id);
+      if (execRes.success) executions = execRes.data;
+
+      // Approvals
+      const appRes = await db.approvals.list();
+      if (appRes.success) {
+        approvals = appRes.data.filter((a) => a.taskId === task.id);
+      }
+
+      // Artifacts
+      const artRes = await db.artifacts.listByTaskId(task.id);
+      if (artRes.success) artifacts = artRes.data;
+    }
+
+    // Calculate budget metrics from executions
+    let usedTokens = 0;
+    let usedSpendUsd = 0;
+    for (const e of executions) {
+      usedTokens += e.metrics.tokensTotal;
+      usedSpendUsd += e.metrics.estimatedCostUsd;
+    }
+    budgetSummary = {
+      usedTokens,
+      usedSpendUsd,
+      maxSpendUsd: 10.0,
+    };
+
+    const detail: TaskDetailData = {
+      task,
+      assignedProfile,
+      plan,
+      steps,
+      executions,
+      approvals,
+      artifacts,
+      availableActions: getAvailableTaskActions(task),
+      budgetSummary,
+    };
+
+    this.setState({ selectedTaskDetail: detail });
+  }
+
+  // Safe Execution Controls (A2) bounded by assertTaskTransition
+  public async pauseTask(taskId: string): Promise<boolean> {
+    const task = this.state.tasks.find((t) => t.id === taskId);
+    if (!task) return false;
+
+    const actions = getAvailableTaskActions(task);
+    if (!actions.canPause) {
+      this.setAlert(`Cannot pause task in '${task.status}' state`, "warning");
+      return false;
+    }
+
+    const transition = assertTaskTransition(task.status, "waiting_for_input");
+    if (!transition.success) {
+      this.setAlert(`Illegal transition: ${transition.error.message}`, "error");
+      return false;
+    }
+
+    const updatedTask: Task = {
+      ...task,
+      status: "waiting_for_input",
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (this.engine?.db) {
+      await this.engine.db.tasks.update(updatedTask);
+    }
+
+    const nextTasks = this.state.tasks.map((t) => (t.id === taskId ? updatedTask : t));
+    this.setState({ tasks: nextTasks });
+    await this.buildTaskDetail(updatedTask);
+    this.setAlert(`Task paused (awaiting user input)`, "info");
+    this.recordActivityEvent({
+      eventType: "task:status_changed",
+      entityType: "task",
+      entityId: taskId,
+      summary: `Task paused: ${task.title}`,
+      level: "warn",
+    });
+    return true;
+  }
+
+  public async resumeTask(taskId: string): Promise<boolean> {
+    const task = this.state.tasks.find((t) => t.id === taskId);
+    if (!task) return false;
+
+    const actions = getAvailableTaskActions(task);
+    if (!actions.canResume) {
+      this.setAlert(`Cannot resume task in '${task.status}' state`, "warning");
+      return false;
+    }
+
+    const transition = assertTaskTransition(task.status, "running");
+    if (!transition.success) {
+      this.setAlert(`Illegal transition: ${transition.error.message}`, "error");
+      return false;
+    }
+
+    const updatedTask: Task = {
+      ...task,
+      status: "running",
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (this.engine?.db) {
+      await this.engine.db.tasks.update(updatedTask);
+    }
+
+    const nextTasks = this.state.tasks.map((t) => (t.id === taskId ? updatedTask : t));
+    this.setState({ tasks: nextTasks });
+    await this.buildTaskDetail(updatedTask);
+    this.setAlert(`Task resumed execution`, "info");
+    this.recordActivityEvent({
+      eventType: "task:status_changed",
+      entityType: "task",
+      entityId: taskId,
+      summary: `Task resumed: ${task.title}`,
+      level: "info",
+    });
+    return true;
+  }
+
+  public async cancelTask(taskId: string, reason = "Cancelled by user"): Promise<boolean> {
+    const task = this.state.tasks.find((t) => t.id === taskId);
+    if (!task) return false;
+
+    const actions = getAvailableTaskActions(task);
+    if (!actions.canCancel) {
+      this.setAlert(`Cannot cancel task in terminal state '${task.status}'`, "warning");
+      return false;
+    }
+
+    const transition = assertTaskTransition(task.status, "cancelled");
+    if (!transition.success) {
+      this.setAlert(`Illegal transition: ${transition.error.message}`, "error");
+      return false;
+    }
+
+    const updatedTask: Task = {
+      ...task,
+      status: "cancelled",
+      failureReason: reason,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (this.engine?.db) {
+      await this.engine.db.tasks.update(updatedTask);
+    }
+
+    const nextTasks = this.state.tasks.map((t) => (t.id === taskId ? updatedTask : t));
+    this.setState({ tasks: nextTasks });
+    await this.buildTaskDetail(updatedTask);
+    this.setAlert(`Task cancelled: ${reason}`, "warning");
+    this.recordActivityEvent({
+      eventType: "task:cancelled",
+      entityType: "task",
+      entityId: taskId,
+      summary: `Task cancelled: ${task.title} (${reason})`,
+      level: "warn",
+    });
+    return true;
+  }
+
+  public async retryTask(taskId: string): Promise<boolean> {
+    const task = this.state.tasks.find((t) => t.id === taskId);
+    if (!task) return false;
+
+    const actions = getAvailableTaskActions(task);
+    if (!actions.canRetry) {
+      this.setAlert(`Cannot retry task in state '${task.status}'`, "warning");
+      return false;
+    }
+
+    const transition = assertTaskTransition(task.status, "queued");
+    if (!transition.success) {
+      this.setAlert(`Illegal transition: ${transition.error.message}`, "error");
+      return false;
+    }
+
+    const updatedTask: Task = {
+      ...task,
+      status: "queued",
+      failureReason: undefined,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (this.engine?.db) {
+      await this.engine.db.tasks.update(updatedTask);
+    }
+
+    const nextTasks = this.state.tasks.map((t) => (t.id === taskId ? updatedTask : t));
+    this.setState({ tasks: nextTasks });
+    await this.buildTaskDetail(updatedTask);
+    this.setAlert(`Task re-queued for execution`, "info");
+    this.recordActivityEvent({
+      eventType: "task:created",
+      entityType: "task",
+      entityId: taskId,
+      summary: `Task re-queued for execution: ${task.title}`,
+      level: "info",
+    });
+    return true;
+  }
+
+  public async createTask(input: TaskCreateFormInput): Promise<Task | null> {
+    this.setState({ isPlanningTask: true });
+
+    try {
+      const now = new Date().toISOString();
+      const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+      let planSteps: TaskStep[] = [];
+      let taskPlan: TaskPlan | undefined;
+      if (this.engine?.intake) {
+        const planRes = await this.engine.intake.processIntake({
+          prompt: `${input.title}\n\n${input.description}`,
+          explicitDepartment: input.department,
+          budgetCapUsd: input.budgetLimitUsd,
+        });
+        if (planRes.success && planRes.data.plan) {
+          taskPlan = {
+            ...planRes.data.plan,
+            taskId,
+          };
+          if (taskPlan.steps) {
+            planSteps = taskPlan.steps.map((s: PlanStep, idx: number) => ({
+              id: s.id,
+              taskId,
+              stepIndex: idx + 1,
+              title: s.title,
+              description: s.description,
+              assignedAgentId: s.candidateAgentSlugs?.[0],
+              status: "pending" as const,
+            }));
+          }
+        }
+      }
+
+      const newTask: Task = {
+        id: taskId,
+        title: input.title.trim(),
+        description: input.description.trim(),
+        department: input.department,
+        priority: input.priority,
+        status: "planned",
+        contextRefs: [],
+        expectedDeliverables: [],
+        delegationDepth: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      if (this.engine?.db) {
+        await this.engine.db.tasks.create(newTask);
+        if (taskPlan && this.engine.db.plans) {
+          await this.engine.db.plans.create(taskPlan);
+        }
+        for (const step of planSteps) {
+          await this.engine.db.steps.create(step);
+        }
+      }
+
+      const nextTasks = [newTask, ...this.state.tasks];
+      this.setState({
+        tasks: nextTasks,
+        selectedTaskId: taskId,
+        taskViewMode: "detail",
+        isPlanningTask: false,
+      });
+
+      await this.buildTaskDetail(newTask);
+      this.setAlert(`Task created & planned: ${newTask.title}`, "success");
+      this.recordActivityEvent({
+        eventType: "task:created",
+        entityType: "task",
+        entityId: taskId,
+        summary: `Created task: ${newTask.title}`,
+        level: "info",
+      });
+
+      return newTask;
+    } catch (err) {
+      console.warn("Failed to create task:", err);
+      this.setAlert("Failed to plan task", "error");
+      this.setState({ isPlanningTask: false });
+      return null;
+    }
+  }
+
+  // =========================================================================
+  // Conversations & Multi-Agent Debates (Prompt 16)
+  // =========================================================================
+
+  public async loadSessions(): Promise<void> {
+    if (!this.engine?.db?.sessions) return;
+
+    try {
+      const res = await this.engine.db.sessions.list();
+      if (res.success && Array.isArray(res.data)) {
+        this.setState({ sessions: res.data });
+        if (res.data[0] && !this.state.selectedSessionId) {
+          await this.selectSession(res.data[0].id);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load sessions:", err);
+    }
+  }
+
+  public async selectSession(sessionId: string | null): Promise<void> {
+    if (!sessionId) {
+      this.setState({ selectedSessionId: null, sessionMessages: [] });
+      return;
+    }
+
+    const idx = this.state.sessions.findIndex((s) => s.id === sessionId);
+    this.setState({
+      selectedSessionId: sessionId,
+      selectedSessionIndex: idx >= 0 ? idx : 0,
+    });
+
+    if (this.engine?.db?.sessions) {
+      const msgRes = await this.engine.db.sessions.getMessages(sessionId, 50);
+      if (msgRes.success && Array.isArray(msgRes.data)) {
+        const uiMsgs: ConversationMessageUI[] = msgRes.data.map((m) => {
+          const profile = this.state.ecosystemProfiles.find((p) => p.id === m.senderId);
+          const isSimulated =
+            profile?.department === "customer_intelligence" || !!profile?.personaAttributes;
+          return {
+            id: m.id,
+            sessionId: m.sessionId,
+            senderId: m.senderId,
+            senderName: profile?.displayName || profile?.name || m.senderId,
+            senderRole: profile?.role,
+            senderDepartment: profile?.department,
+            senderType: m.senderType,
+            role: m.role,
+            content: m.content,
+            timestamp: m.createdAt,
+            isSimulatedPersona: isSimulated,
+            citations: m.citations,
+          };
+        });
+        this.setState({ sessionMessages: uiMsgs });
+      }
+    }
+  }
+
+  public setSessionIndex(index: number): void {
+    if (this.state.sessions.length === 0) return;
+    const safeIdx = Math.max(0, Math.min(this.state.sessions.length - 1, index));
+    const target = this.state.sessions[safeIdx];
+    if (target) {
+      void this.selectSession(target.id);
+    }
+  }
+
+  public setChatDraft(text: string): void {
+    this.setState({ chatDraftText: text });
+  }
+
+  public async createSession(
+    title: string,
+    participantAgentIds: string[],
+    mode: SessionMode = "interactive"
+  ): Promise<Session | null> {
+    const now = new Date().toISOString();
+    const newSession: Session = {
+      id: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      title: title.trim(),
+      mode,
+      status: "active",
+      participantAgentIds,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (this.engine?.db?.sessions) {
+      await this.engine.db.sessions.create(newSession);
+    }
+
+    const nextSessions = [newSession, ...this.state.sessions];
+    this.setState({
+      sessions: nextSessions,
+      selectedSessionId: newSession.id,
+      selectedSessionIndex: 0,
+      sessionMessages: [],
+    });
+
+    this.setAlert(`Started conversation: ${newSession.title}`, "info");
+    return newSession;
+  }
+
+  public async sendMessage(
+    content: string,
+    options?: {
+      senderId?: string;
+      senderName?: string;
+      senderType?: MessageSenderType;
+      role?: MessageRole;
+      isSimulated?: boolean;
+      disagreements?: readonly { specialist: string; argument: string }[];
+      uncertaintyLevel?: "low" | "medium" | "high" | "critical";
+      uncertaintyExplanation?: string;
+      toolCalls?: readonly { name: string; riskLevel: any; isConsequential: boolean }[];
+    }
+  ): Promise<void> {
+    const text = content.trim();
+    if (!text) return;
+
+    const sessionId = this.state.selectedSessionId ?? "sess_default";
+    const now = new Date().toISOString();
+    const msgId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    const senderType = options?.senderType ?? "user";
+    const role = options?.role ?? (senderType === "user" ? "user" : "assistant");
+    const senderName = options?.senderName ?? (senderType === "user" ? "User" : "Agent");
+
+    const newMsg: ConversationMessageUI = {
+      id: msgId,
+      sessionId,
+      senderId: options?.senderId ?? "user",
+      senderName,
+      senderType,
+      role,
+      content: text,
+      timestamp: now,
+      isSimulatedPersona: options?.isSimulated ?? false,
+      disagreements: options?.disagreements,
+      uncertaintyLevel: options?.uncertaintyLevel,
+      uncertaintyExplanation: options?.uncertaintyExplanation,
+      toolCalls: options?.toolCalls,
+    };
+
+    if (this.engine?.db?.sessions) {
+      await this.engine.db.sessions.addMessage({
+        id: msgId,
+        sessionId,
+        senderId: newMsg.senderId,
+        senderType,
+        role,
+        content: text,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    this.setState({
+      sessionMessages: [...this.state.sessionMessages, newMsg],
+      chatDraftText: "",
+    });
+  }
+
+  // =========================================================================
+  // Activity Feed & Missed-Event Replay (Prompt 16)
+  // =========================================================================
+
+  public recordActivityEvent(rawEvent: any): void {
+    if (!rawEvent) return;
+
+    const id = rawEvent.id ?? `evt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const eventType = rawEvent.eventType ?? "system:notice";
+    const timestamp = rawEvent.timestamp ?? new Date().toISOString();
+    const source = rawEvent.source ?? "system";
+    const entityType = rawEvent.entityType ?? "unknown";
+    const entityId = rawEvent.entityId ?? "";
+    const level: "info" | "warn" | "error" | "debug" =
+      rawEvent.level ??
+      (eventType.includes("failed") || eventType.includes("error") || eventType.includes("rejected")
+        ? "error"
+        : eventType.includes("warning") || eventType.includes("exceeded") || eventType.includes("requested")
+        ? "warn"
+        : "info");
+
+    let glyph = "●";
+    let color: TerminalColorName = "cyan";
+
+    if (eventType.startsWith("task:")) {
+      glyph = "📋";
+      color = "blue";
+    } else if (eventType.startsWith("execution:")) {
+      glyph = "▶";
+      color = "green";
+    } else if (eventType.startsWith("approval:")) {
+      glyph = "🔒";
+      color = "yellow";
+    } else if (eventType.startsWith("budget:")) {
+      glyph = "💰";
+      color = "yellow";
+    } else if (eventType.startsWith("tool:")) {
+      glyph = "⚡";
+      color = "cyan";
+    } else if (eventType.startsWith("memory:")) {
+      glyph = "🧠";
+      color = "magenta";
+    }
+
+    if (level === "error") color = "red";
+    else if (level === "warn") color = "yellow";
+
+    const summary =
+      rawEvent.payload?.description ??
+      rawEvent.payload?.message ??
+      rawEvent.summary ??
+      `${eventType} on ${entityType} ${entityId}`;
+
+    const newEntry: ActivityFeedEventUI = {
+      id,
+      eventType,
+      timestamp,
+      sequenceNumber: rawEvent.sequenceNumber ?? this.state.activityFeed.items.length + 1,
+      source,
+      entityType,
+      entityId,
+      summary: String(summary),
+      level,
+      glyph,
+      color,
+    };
+
+    if (this.state.activityFeed.items.some((item) => item.id === id)) {
+      return;
+    }
+
+    const nextItems = [newEntry, ...this.state.activityFeed.items].slice(0, 100);
+    this.setState({
+      activityFeed: {
+        ...this.state.activityFeed,
+        items: nextItems,
+        lastSeenTimestamp: timestamp,
+        lastSeenSequenceNumber: newEntry.sequenceNumber,
+      },
+    });
+  }
+
+  public async reconnectActivityFeed(): Promise<number> {
+    if (!this.engine?.db?.events) {
+      this.setState({
+        activityFeed: {
+          ...this.state.activityFeed,
+          isConnected: false,
+        },
+      });
+      return 0;
+    }
+
+    try {
+      const queryRes = await this.engine.db.events.query({
+        limit: 50,
+      });
+
+      if (!queryRes.success || !Array.isArray(queryRes.data)) {
+        return 0;
+      }
+
+      const existingIds = new Set(this.state.activityFeed.items.map((i) => i.id));
+      const missedEvents = queryRes.data.filter((e) => !existingIds.has(e.id));
+
+      if (missedEvents.length === 0) {
+        this.setState({
+          activityFeed: {
+            ...this.state.activityFeed,
+            isConnected: true,
+          },
+        });
+        return 0;
+      }
+
+      const sorted = [...missedEvents].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      for (const ev of sorted) {
+        this.recordActivityEvent(ev);
+      }
+
+      const replayedCount = this.state.activityFeed.replayedMissedEventsCount + missedEvents.length;
+      this.setState({
+        activityFeed: {
+          ...this.state.activityFeed,
+          isConnected: true,
+          replayedMissedEventsCount: replayedCount,
+        },
+      });
+
+      return missedEvents.length;
+    } catch {
+      this.setState({
+        activityFeed: {
+          ...this.state.activityFeed,
+          isConnected: false,
+        },
+      });
+      return 0;
+    }
+  }
+
+  // =========================================================================
+  // Overview Metrics Refresh (Prompt 15)
+  // =========================================================================
+
   public async refreshOverview(): Promise<void> {
     if (!this.engine) {
       this.setState({
@@ -512,8 +1284,7 @@ export class UiStateController {
       const deptCounts: Record<string, number> = {};
       let simulatedCount = 0;
 
-      // 1. Registered Profiles
-      if (db) {
+      if (db?.agentProfiles) {
         const profRes = await db.agentProfiles.list();
         if (profRes.success && Array.isArray(profRes.data)) {
           profiles = profRes.data;
@@ -534,14 +1305,13 @@ export class UiStateController {
         }
       }
 
-      // 2. Tasks
       let queuedTasks = 0;
       let runningTasks = 0;
       let completedTasks = 0;
       let failedTasks = 0;
       const recentTasks: OverviewTaskItem[] = [];
 
-      if (db) {
+      if (db?.tasks) {
         const tasksRes = await db.tasks.list();
         if (tasksRes.success && Array.isArray(tasksRes.data)) {
           for (const t of tasksRes.data) {
@@ -551,7 +1321,6 @@ export class UiStateController {
             else if (t.status === "failed") failedTasks++;
           }
 
-          // Latest 5 tasks
           const sorted = [...tasksRes.data].sort(
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
@@ -567,11 +1336,10 @@ export class UiStateController {
         }
       }
 
-      // 3. Executions
       let activeExecutionsCount = 0;
       const recentExecutions: OverviewExecutionItem[] = [];
 
-      if (db && typeof db.executions.list === "function") {
+      if (db?.executions && typeof db.executions.list === "function") {
         const execRes = await db.executions.list();
         if (execRes.success && Array.isArray(execRes.data)) {
           for (const e of execRes.data) {
@@ -599,11 +1367,10 @@ export class UiStateController {
         }
       }
 
-      // 4. Approvals
       let pendingApprovalsCount = 0;
       const pendingApprovals: OverviewApprovalItem[] = [];
 
-      if (db) {
+      if (db?.approvals && typeof db.approvals.list === "function") {
         const appRes = await db.approvals.list();
         if (appRes.success && Array.isArray(appRes.data)) {
           const pending = appRes.data.filter((a) => a.status === "pending");
@@ -621,7 +1388,6 @@ export class UiStateController {
         }
       }
 
-      // 5. Budget & Tokens
       let totalSpendUsd = 0.0;
       let totalTokensUsed = 0;
       let maxSpendUsd = 10.0;
@@ -684,12 +1450,8 @@ export class UiStateController {
     }
   }
 
-  /**
-   * Returns standard command palette actions.
-   */
   public getCommandPaletteItems(): CommandPaletteItem[] {
     const items: CommandPaletteItem[] = [
-      // Quick navigation to all workspaces
       ...Object.values(WORKSPACE_AREAS).map((area) => ({
         id: `nav-${area.id}`,
         title: `Go to ${area.label}`,
@@ -698,7 +1460,36 @@ export class UiStateController {
         category: "navigation" as const,
         action: () => this.navigate(area.id),
       })),
-      // Prompt 15: Ecosystem & Overview Specific Quick Actions
+      {
+        id: "action-create-task",
+        title: "Create & Plan Task",
+        subtitle: "Open task intake form to plan new agent workload",
+        shortcut: "[c]",
+        category: "action",
+        action: () => {
+          this.navigate("tasks");
+          this.setTaskViewMode("create");
+        },
+      },
+      {
+        id: "action-filter-running-tasks",
+        title: "Filter Tasks: Running & Queued",
+        subtitle: "View active tasks progressing through pipeline",
+        category: "action",
+        action: () => {
+          this.navigate("tasks");
+          this.setTaskFilter({ status: "running" });
+        },
+      },
+      {
+        id: "action-reconnect-activity",
+        title: "Reconnect Activity Feed",
+        subtitle: "Replay missed events from persistence log",
+        category: "action",
+        action: () => {
+          void this.reconnectActivityFeed();
+        },
+      },
       {
         id: "action-refresh-overview",
         title: "Refresh Overview Metrics",
@@ -708,6 +1499,7 @@ export class UiStateController {
         action: () => {
           void this.refreshOverview();
           void this.loadEcosystem();
+          void this.loadTasks();
         },
       },
       {
@@ -720,17 +1512,6 @@ export class UiStateController {
           this.setEcosystemDepartmentFilter("engineering");
         },
       },
-      {
-        id: "action-filter-simulated-personas",
-        title: "Filter Agents: Simulated Customer Personas",
-        subtitle: "View simulated customer personas with demographic attributes",
-        category: "action",
-        action: () => {
-          this.navigate("ecosystem");
-          this.setEcosystemDepartmentFilter("customer_intelligence");
-        },
-      },
-      // View / UI toggles
       {
         id: "view-toggle-sidebar",
         title: this.state.isSidebarCollapsed ? "Expand Navigation Sidebar" : "Collapse Navigation Sidebar",
@@ -769,17 +1550,16 @@ export class UiStateController {
     );
   }
 
-  /**
-   * Binds to CoreEngine domain events for real-time observability.
-   */
   private bindEngineEvents(): void {
     if (!this.engine) return;
 
     try {
-      // Event listener for real-time domain events via telemetry
       if (this.engine.telemetry && typeof this.engine.telemetry.subscribeEvents === "function") {
         const sub = this.engine.telemetry.subscribeEvents((event: any) => {
           if (!event || !event.eventType) return;
+
+          // Record into observable activity feed
+          this.recordActivityEvent(event);
 
           switch (event.eventType) {
             case "task:started":
@@ -787,6 +1567,9 @@ export class UiStateController {
             case "task:completed":
             case "task:failed":
             case "task:cancelled":
+              void this.refreshOverview();
+              void this.loadTasks();
+              break;
             case "execution:started":
             case "execution:completed":
             case "execution:failed":

@@ -22,6 +22,8 @@ import { ResponsiveContainer } from "./components/ResponsiveContainer.js";
 import { LoadingState, ErrorState, DisconnectedState } from "./components/ViewStates.js";
 import { OverviewView } from "./views/OverviewView.js";
 import { EcosystemView } from "./views/EcosystemView.js";
+import { TasksView } from "./views/TasksView.js";
+import { ConversationsView } from "./views/ConversationsView.js";
 import { PlaceholderView } from "./views/PlaceholderView.js";
 
 export interface AppShellProps {
@@ -224,6 +226,10 @@ export function AppShell({
                 <OverviewView />
               ) : state.activeWorkspace === "ecosystem" ? (
                 <EcosystemView />
+              ) : state.activeWorkspace === "tasks" ? (
+                <TasksView />
+              ) : state.activeWorkspace === "conversations" ? (
+                <ConversationsView />
               ) : (
                 <PlaceholderView workspaceId={state.activeWorkspace} />
               )}
