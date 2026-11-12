@@ -149,7 +149,7 @@ describe("Reports & Evidence OpenTUI View Suite (A4 & A5)", () => {
 
     await setup.renderOnce();
     const frame = setup.captureCharFrame();
-    expect(frame).toContain("Reports & Evidence");
+    expect(frame).toContain("REPORTS & EVIDENCE");
     expect(frame).toContain("No reports generated yet");
     expect(frame).toContain("Press [s] to run Customer");
     await setup.dispose();
@@ -173,7 +173,7 @@ describe("Reports & Evidence OpenTUI View Suite (A4 & A5)", () => {
 
     await setup.renderOnce();
     const frame = setup.captureCharFrame();
-    expect(frame).toContain("Reports & Evidence");
+    expect(frame).toContain("REPORTS & EVIDENCE");
     expect(frame).toContain("2 Reports");
     expect(frame).toContain("Platform Security");
     expect(frame).toContain("[HIGH]");

@@ -37,6 +37,7 @@ export * from "./results.ts";
 export * from "./repositories.ts";
 export * from "./code.ts";
 export * from "./workflow.ts";
+export * from "./coding-agents.ts";
 
 // UI presentation and user-facing terminology
 export * from "./ui.ts";

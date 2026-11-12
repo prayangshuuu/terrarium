@@ -33,6 +33,7 @@ import { TelemetryManager } from "./observability/index.ts";
 import { createEngineeringStudioService, EngineeringStudioService } from "./studio/index.ts";
 import { createReportService, ReportService } from "./reports/index.ts";
 import { EndToEndWorkflowPipeline } from "./workflow/index.ts";
+import { createCodingAgentRegistry, CodingAgentRegistry, createCodingAgentRouter, CodingAgentRouter } from "./coding-agents/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
@@ -52,6 +53,7 @@ export * from "./observability/index.ts";
 export * from "./studio/index.ts";
 export * from "./reports/index.ts";
 export * from "./workflow/index.ts";
+export * from "./coding-agents/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -76,6 +78,8 @@ export interface CoreEngine {
   readonly studio: EngineeringStudioService;
   readonly reports: ReportService;
   readonly workflow: EndToEndWorkflowPipeline;
+  readonly codingAgents: CodingAgentRegistry;
+  readonly codingAgentRouter: CodingAgentRouter;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -96,6 +100,8 @@ export interface CreateCoreEngineOptions {
   readonly studio?: EngineeringStudioService;
   readonly reports?: ReportService;
   readonly workflow?: EndToEndWorkflowPipeline;
+  readonly codingAgents?: CodingAgentRegistry;
+  readonly codingAgentRouter?: CodingAgentRouter;
 }
 
 /**
@@ -200,6 +206,14 @@ export function createCoreEngine(
         repositories: db,
       });
 
+  const codingAgents = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).codingAgents
+    ? (optionsOrConfig as CreateCoreEngineOptions).codingAgents!
+    : createCodingAgentRegistry();
+
+  const codingAgentRouter = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).codingAgentRouter
+    ? (optionsOrConfig as CreateCoreEngineOptions).codingAgentRouter!
+    : createCodingAgentRouter({ registry: codingAgents });
+
   return {
     config,
     db,
@@ -217,6 +231,8 @@ export function createCoreEngine(
     studio,
     reports,
     workflow,
+    codingAgents,
+    codingAgentRouter,
     getState(): CoreEngineState {
       return {
         status,

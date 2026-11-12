@@ -128,11 +128,11 @@ describe("CLI Observability, Activity & Logs Suite (A4 & A5)", () => {
       const res = await handleLogsInspect(db.logs);
       expect(res.success).toBe(true);
       if (res.success) {
-        expect(res.data).toContain("STRUCTURED AUDIT LOGS");
+        expect(res.data).toContain("[AUDIT] STRUCTURED AUDIT LOGS");
         expect(res.data).toContain("[INFO]");
         expect(res.data).toContain("[WARN]");
-        expect(res.data).toContain("[REDACTED:OPENAI_");
-        expect(res.data).toContain("🔒"); // redacted glyph
+        expect(res.data).toContain("[REDACTED:OPE");
+        expect(res.data).toContain("[SEC]"); // redacted badge
       }
     });
 

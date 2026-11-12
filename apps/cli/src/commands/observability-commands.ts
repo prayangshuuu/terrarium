@@ -36,7 +36,7 @@ export function formatActivityFeedCard(items: readonly ActivityFeedItem[]): stri
   const lines: string[] = [];
 
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ 🛰️  ACTIVITY FEED (HUMAN TIMELINE)                                          │`);
+  lines.push(`│ [ACTIVITY] ACTIVITY FEED (HUMAN TIMELINE)                                   │`);
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
 
   if (items.length === 0) {
@@ -46,15 +46,15 @@ export function formatActivityFeedCard(items: readonly ActivityFeedItem[]): stri
   }
 
   for (const item of items) {
-    let glyph = "●";
+    let glyph = "•";
     if (item.eventType.includes("completed") || item.eventType.includes("approved") || item.eventType.includes("succeeded")) {
-      glyph = "✓";
+      glyph = "[OK]";
     } else if (item.eventType.includes("failed") || item.eventType.includes("rejected")) {
-      glyph = "✗";
+      glyph = "[FAIL]";
     } else if (item.eventType.includes("approval") || item.eventType.includes("budget")) {
-      glyph = "🔒";
+      glyph = "[GATE]";
     } else if (item.eventType.includes("started") || item.eventType.includes("invoked")) {
-      glyph = "▶";
+      glyph = "[RUN]";
     }
 
     const time = item.timestamp.slice(11, 19);
@@ -79,18 +79,18 @@ export function formatMetricsCard(summary: MetricsSummary): string {
   const successGauge = `[${"█".repeat(blocks)}${"-".repeat(20 - blocks)}] ${pct}% (${summary.successCount} passed / ${summary.failureCount} failed)`;
 
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ 📈 RUNTIME TELEMETRY & SYSTEM PERFORMANCE                                   │`);
+  lines.push(`│ [TELEMETRY] RUNTIME TELEMETRY & SYSTEM PERFORMANCE                          │`);
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
   lines.push(`│ Reporting Window: ${summary.periodStart.slice(0, 19)} to ${summary.periodEnd.slice(0, 19)} │`);
 
   // Success Rate
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ 🎯 SUCCESS RATE:                                                            │`);
+  lines.push(`│ [METRICS] SUCCESS RATE:                                                     │`);
   lines.push(`│   ${successGauge.padEnd(74)}│`);
 
   // Latency Percentiles
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ ⏱️  LATENCY DISTRIBUTION (ms):                                               │`);
+  lines.push(`│ [LATENCY] LATENCY DISTRIBUTION (ms):                                        │`);
   const lat = summary.latency;
   const latStr1 = `Samples: ${lat.count} | Avg: ${lat.avgMs}ms | Min: ${lat.minMs}ms | Max: ${lat.maxMs}ms`;
   const latStr2 = `Percentiles: p50: ${lat.p50Ms}ms | p95: ${lat.p95Ms}ms | p99: ${lat.p99Ms}ms`;
@@ -99,7 +99,7 @@ export function formatMetricsCard(summary: MetricsSummary): string {
 
   // Queue & Retries
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ 🔄 SCHEDULING & RETRIES:                                                    │`);
+  lines.push(`│ [SCHEDULING] SCHEDULING & RETRIES:                                          │`);
   const queueStr = `Queue Delay: avg ${summary.queueDelay.avgMs}ms (max ${summary.queueDelay.maxMs}ms, ${summary.queueDelay.count} samples)`;
   const retryStr = `Retry Count: ${summary.retryCount} transient recovery attempts`;
   lines.push(`│   • ${queueStr.padEnd(72)}│`);
@@ -107,7 +107,7 @@ export function formatMetricsCard(summary: MetricsSummary): string {
 
   // Token Usage & Spend
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ 💰 USAGE & SPEND ACCUMULATION:                                              │`);
+  lines.push(`│ [BUDGET] USAGE & SPEND ACCUMULATION:                                        │`);
   const usageStr = `Total Tokens: ${summary.totalTokens.toLocaleString()} tokens`;
   const spendStr = `Estimated Spend: $${summary.totalEstimatedSpendUsd.toFixed(4)} USD*`;
   lines.push(`│   • ${usageStr.padEnd(72)}│`);
@@ -125,7 +125,7 @@ export function formatLogsCard(logs: readonly StructuredLogRecord[]): string {
   const lines: string[] = [];
 
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ 📜 STRUCTURED AUDIT LOGS                                                    │`);
+  lines.push(`│ [AUDIT] STRUCTURED AUDIT LOGS                                               │`);
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
 
   if (logs.length === 0) {
@@ -138,8 +138,8 @@ export function formatLogsCard(logs: readonly StructuredLogRecord[]): string {
     const time = log.timestamp.slice(11, 19);
     const lvl = `[${log.level.toUpperCase()}]`.padEnd(7);
     const corr = `[${log.correlation.correlationId.slice(0, 8)}]`;
-    const red = log.isRedacted ? "🔒" : " ";
-    const msg = log.message.length > 44 ? `${log.message.slice(0, 41)}...` : log.message;
+    const red = log.isRedacted ? "[SEC]" : "     ";
+    const msg = log.message.length > 40 ? `${log.message.slice(0, 37)}...` : log.message;
 
     const lineStr = `│ ${time} ${lvl} ${corr} ${red} ${msg}`;
     lines.push(lineStr.padEnd(78) + `│`);

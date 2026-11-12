@@ -92,3 +92,46 @@ export async function handleDepartmentList(
 
   return ok(summaries.join("\n\n"));
 }
+
+/**
+ * Handles unregistering an agent profile.
+ */
+export async function handleAgentUnregister(
+  registry: AgentRegistry,
+  idOrSlug: string
+): Promise<Result<string, TerrariumError>> {
+  const res = await registry.unregister(idOrSlug);
+  if (!res.success) {
+    return fail(res.error);
+  }
+  return ok(`Agent profile '${idOrSlug}' successfully removed from registry.`);
+}
+
+/**
+ * Handles enabling an agent profile.
+ */
+export async function handleAgentEnable(
+  registry: AgentRegistry,
+  idOrSlug: string
+): Promise<Result<string, TerrariumError>> {
+  const res = await registry.enable(idOrSlug);
+  if (!res.success) {
+    return fail(res.error);
+  }
+  return ok(`Agent profile '${idOrSlug}' status updated to 'available'.`);
+}
+
+/**
+ * Handles disabling an agent profile.
+ */
+export async function handleAgentDisable(
+  registry: AgentRegistry,
+  idOrSlug: string,
+  reason?: string
+): Promise<Result<string, TerrariumError>> {
+  const res = await registry.disable(idOrSlug, reason);
+  if (!res.success) {
+    return fail(res.error);
+  }
+  return ok(`Agent profile '${idOrSlug}' status updated to 'disabled'. Reason: ${reason ?? "Administrative action"}`);
+}

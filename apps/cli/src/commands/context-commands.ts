@@ -38,7 +38,7 @@ export function formatContextPackageCard(pkg: AgentContextPackage): string {
   const pctUsed = Math.min(100, Math.round((pkg.tokenEstimate / pkg.tokenLimit) * 100));
 
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ 📦 AGENT CONTEXT PACKAGE                                                    │`);
+  lines.push(`│ [CONTEXT] AGENT CONTEXT PACKAGE                                             │`);
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
   lines.push(`│ ID:          ${pkg.id.padEnd(61)} │`);
   lines.push(`│ Agent:       ${pkg.agentSlug.padEnd(61)} │`);
@@ -51,13 +51,13 @@ export function formatContextPackageCard(pkg: AgentContextPackage): string {
   // Token budget gauge
   const budgetBar = `[${"█".repeat(Math.floor(pctUsed / 5))}${"-".repeat(20 - Math.floor(pctUsed / 5))}] ${pctUsed}% (${pkg.tokenEstimate} / ${pkg.tokenLimit} tokens)`;
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ 📊 TOKEN BUDGET:                                                            │`);
+  lines.push(`│ [TOKENS] TOKEN BUDGET:                                                      │`);
   lines.push(`│   ${budgetBar.padEnd(74)}│`);
 
   // Warnings
   if (pkg.warnings.length > 0) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ ⚠️  CONTEXT WARNINGS (${pkg.warnings.length}):                                          │`);
+    lines.push(`│ [WARN] CONTEXT WARNINGS (${pkg.warnings.length}):                                          │`);
     for (const w of pkg.warnings) {
       const wrapped = w.length > 70 ? `${w.slice(0, 67)}...` : w;
       lines.push(`│   • ${wrapped.padEnd(72)}│`);
@@ -67,7 +67,7 @@ export function formatContextPackageCard(pkg: AgentContextPackage): string {
   // Active constraints
   if (pkg.activeConstraints.length > 0) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ 🔒 ACTIVE CONSTRAINTS (${pkg.activeConstraints.length}):                                       │`);
+    lines.push(`│ [CONSTRAINTS] ACTIVE CONSTRAINTS (${pkg.activeConstraints.length}):                        │`);
     for (const c of pkg.activeConstraints) {
       const wrapped = c.length > 70 ? `${c.slice(0, 67)}...` : c;
       lines.push(`│   • ${wrapped.padEnd(72)}│`);
@@ -77,7 +77,7 @@ export function formatContextPackageCard(pkg: AgentContextPackage): string {
   // Durable decisions
   if (pkg.durableDecisions.length > 0) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ ⚖️  DURABLE DECISIONS RETAINED (${pkg.durableDecisions.length}):                                │`);
+    lines.push(`│ [DECISIONS] DURABLE DECISIONS RETAINED (${pkg.durableDecisions.length}):                    │`);
     for (const d of pkg.durableDecisions) {
       const title = `${d.key}: ${d.content.slice(0, 50)}...`;
       lines.push(`│   • ${title.padEnd(72)}│`);
@@ -86,7 +86,7 @@ export function formatContextPackageCard(pkg: AgentContextPackage): string {
 
   // Relevant memories
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ 🧠 RELEVANT MEMORIES (${pkg.relevantMemories.length}):                                          │`);
+  lines.push(`│ [MEMORIES] RELEVANT MEMORIES (${pkg.relevantMemories.length}):                             │`);
   for (const m of pkg.relevantMemories.slice(0, 5)) {
     const summary = `${m.category} | ${m.key} (${m.confidence})`;
     lines.push(`│   • ${summary.padEnd(72)}│`);
@@ -98,7 +98,7 @@ export function formatContextPackageCard(pkg: AgentContextPackage): string {
   // Conversation history summary
   if (pkg.conversationSummary) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ 📜 CONVERSATION SUMMARY:                                                    │`);
+    lines.push(`│ [CONVERSATION] CONVERSATION SUMMARY:                                        │`);
     const summaryLines = pkg.conversationSummary.split("\n").slice(0, 4);
     for (const s of summaryLines) {
       const wrapped = s.length > 70 ? `${s.slice(0, 67)}...` : s;

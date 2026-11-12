@@ -121,11 +121,11 @@ describe("Conversations & Multi-Agent Debates Suite (A2, A4 & A5)", () => {
     const frame = setup.captureCharFrame();
 
     expect(frame).toContain("Storage Engine Architecture Debate");
-    expect(frame).toContain("👤 You");
+    expect(frame).toContain("You");
     expect(frame).toContain("Should we migrate from SQLite to Postgres");
-    expect(frame).toContain("🤖 Sophia Chen");
+    expect(frame).toContain("[AGENT] Sophia Chen");
     expect(frame).toContain("SQLite with WAL mode satisfies our low latency");
-    expect(frame).toContain("⚡ Tool");
+    expect(frame).toContain("[TOOL]");
     expect(frame).toContain("Benchmark results: SQLite read p99: 0.12ms");
     expect(frame).toContain("Tool executed: benchmark_runner");
 

@@ -1194,22 +1194,22 @@ export class UiStateController {
     let color: TerminalColorName = "cyan";
 
     if (eventType.startsWith("task:")) {
-      glyph = "📋";
+      glyph = "[TASK]";
       color = "blue";
     } else if (eventType.startsWith("execution:")) {
-      glyph = "▶";
+      glyph = "[EXEC]";
       color = "green";
     } else if (eventType.startsWith("approval:")) {
-      glyph = "🔒";
+      glyph = "[GATE]";
       color = "yellow";
     } else if (eventType.startsWith("budget:")) {
-      glyph = "💰";
+      glyph = "[BUDGET]";
       color = "yellow";
     } else if (eventType.startsWith("tool:")) {
-      glyph = "⚡";
+      glyph = "[TOOL]";
       color = "cyan";
     } else if (eventType.startsWith("memory:")) {
-      glyph = "🧠";
+      glyph = "[MEM]";
       color = "magenta";
     }
 
@@ -1824,11 +1824,11 @@ export class UiStateController {
 
       if (appRes.success) {
         await this.loadStudioData();
-        this.setAlert(`✓ Patch applied to '${appRes.filePath}'. ${appRes.rollbackGuidance}`, "success");
+        this.setAlert(`[OK] Patch applied to '${appRes.filePath}'. ${appRes.rollbackGuidance}`, "success");
         return true;
       } else {
         await this.loadStudioData();
-        this.setAlert(`✗ Failed to apply patch: ${appRes.error}`, "error");
+        this.setAlert(`[FAIL] Failed to apply patch: ${appRes.error}`, "error");
         return false;
       }
     } catch (err: unknown) {
@@ -1897,10 +1897,10 @@ export class UiStateController {
       const res = await this.engine.studio.rollbackPatch(patchId);
       await this.loadStudioData();
       if (res.success) {
-        this.setAlert(`✓ Patch '${patchId}' rolled back. Original file content restored.`, "warning");
+        this.setAlert(`[OK] Patch '${patchId}' rolled back. Original file content restored.`, "warning");
         return true;
       } else {
-        this.setAlert(`✗ Failed to rollback patch: ${res.error}`, "error");
+        this.setAlert(`[FAIL] Failed to rollback patch: ${res.error}`, "error");
         return false;
       }
     } catch (err: unknown) {
@@ -1927,11 +1927,11 @@ export class UiStateController {
       });
 
       if (result.passed) {
-        this.setAlert(`✓ Tests passed: ${result.passedTests}/${result.totalTests} in ${result.durationMs}ms`, "success");
+        this.setAlert(`[OK] Tests passed: ${result.passedTests}/${result.totalTests} in ${result.durationMs}ms`, "success");
       } else if (result.timedOut) {
-        this.setAlert(`⚠ Test run timed out after ${result.durationMs}ms`, "error");
+        this.setAlert(`[WARN] Test run timed out after ${result.durationMs}ms`, "error");
       } else {
-        this.setAlert(`✗ Tests failed (${result.failedTests} failed, exit code ${result.exitCode})`, "error");
+        this.setAlert(`[FAIL] Tests failed (${result.failedTests} failed, exit code ${result.exitCode})`, "error");
       }
     } catch (err: unknown) {
       this.setState({ isRunningStudioTests: false });

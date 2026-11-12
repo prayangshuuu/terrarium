@@ -310,7 +310,7 @@ export function ConversationsView() {
                         <box flexDirection="row" justifyContent="space-between" alignItems="center">
                           <box flexDirection="row" alignItems="center">
                             <text fg={senderColor} attributes={TextAttributes.BOLD}>
-                              {isUser ? "👤 You" : isTool ? "⚡ Tool" : `🤖 ${msg.senderName}`}
+                              {isUser ? "You" : isTool ? "[TOOL]" : `[AGENT] ${msg.senderName}`}
                             </text>
                             {isSimulated && (
                               <text fg={THEME_COLORS.statusSimulated} attributes={TextAttributes.BOLD}>
@@ -404,7 +404,7 @@ export function ConversationsView() {
               paddingX={1}
             >
               <text fg={isTyping ? THEME_COLORS.statusInfo : THEME_COLORS.fgMuted} attributes={TextAttributes.BOLD}>
-                {isTyping ? "💬 Typing: " : "💬 [i/Enter to chat]: "}
+                {isTyping ? "Input: " : "[i/Enter to chat]: "}
               </text>
               <text fg={draft ? THEME_COLORS.fgPrimary : THEME_COLORS.fgDim}>
                 {draft || (isTyping ? "" : "Ask agents, debate trade-offs, or evaluate simulated customer feedback...")}

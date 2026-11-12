@@ -131,8 +131,15 @@ export class SqliteAgentProfileRepository implements AgentProfileRepository {
       }
 
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-      const limitClause = options.limit !== undefined ? `LIMIT ${options.limit}` : "";
-      const offsetClause = options.offset !== undefined ? `OFFSET ${options.offset}` : "";
+      const effectiveLimit = options.pageSize ?? options.limit;
+      const effectiveOffset =
+        options.offset ??
+        (options.page !== undefined && effectiveLimit !== undefined
+          ? Math.max(0, (options.page - 1) * effectiveLimit)
+          : undefined);
+
+      const limitClause = effectiveLimit !== undefined ? `LIMIT ${effectiveLimit}` : "";
+      const offsetClause = effectiveOffset !== undefined ? `OFFSET ${effectiveOffset}` : "";
 
       const sql = `SELECT * FROM agent_profiles ${whereClause} ORDER BY department ASC, name ASC ${limitClause} ${offsetClause};`;
       const rows = this.db.query(sql).all(...params) as AgentProfileRow[];

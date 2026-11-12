@@ -26,6 +26,7 @@ import {
   SIMULATED_RESEARCH_DISCLAIMER,
 } from "@terrarium/contracts";
 import { THEME_COLORS } from "../tokens/colors.js";
+import { GLYPHS } from "../tokens/glyphs.js";
 import { useTerrariumUi } from "../state/ui-context.js";
 import type { ReportsActiveTab } from "../state/ui-state-types.js";
 
@@ -118,7 +119,7 @@ export function ReportsView() {
       >
         <box flexDirection="row" alignItems="center" flexShrink={0}>
           <text fg={THEME_COLORS.statusInfo} attributes={TextAttributes.BOLD}>
-            📊 Reports & Evidence
+            {GLYPHS.wsReports} REPORTS & EVIDENCE
           </text>
           <text fg={THEME_COLORS.fgMuted}>
             {" "}({reports.length} Reports)
@@ -262,7 +263,7 @@ export function ReportsView() {
                   marginBottom={1}
                 >
                   <text fg={THEME_COLORS.statusWarning} attributes={TextAttributes.BOLD}>
-                    ⚠️ SIMULATION NOTICE — SYNTHETIC CUSTOMER RESEARCH
+                    [NOTICE] SIMULATION NOTICE — SYNTHETIC CUSTOMER RESEARCH
                   </text>
                   <text fg={THEME_COLORS.fgSecondary}>
                     {SIMULATED_RESEARCH_DISCLAIMER}
@@ -400,7 +401,7 @@ export function ReportsView() {
                       >
                         <box flexDirection="row" justifyContent="space-between">
                           <text fg={THEME_COLORS.statusWarning} attributes={TextAttributes.BOLD}>
-                            ⚠️ {dis.topic}
+                            [DISAGREEMENT] {dis.topic}
                           </text>
                           <text fg={THEME_COLORS.fgMuted}>[{dis.resolutionStatus.toUpperCase()}]</text>
                         </box>

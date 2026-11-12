@@ -150,7 +150,7 @@ export async function handleReportView(
 
     if (report.hasSimulatedData) {
       lines.push("");
-      lines.push(`${bold}${yellow}⚠️  SIMULATION NOTICE:${reset}`);
+      lines.push(`${bold}${yellow}[SIMULATION NOTICE]:${reset}`);
       lines.push(`${yellow}${SIMULATED_RESEARCH_DISCLAIMER}${reset}`);
     }
 
@@ -320,7 +320,7 @@ export async function handleReportSimulateCustomer(
     `${bold}Customer Simulation Completed:${reset} ${report.title}`,
     `${bold}Report ID:${reset} ${report.id}`,
     "",
-    `${bold}${yellow}⚠️  SIMULATION NOTICE:${reset}`,
+    `${bold}${yellow}[SIMULATION NOTICE]:${reset}`,
     `${yellow}${SIMULATED_RESEARCH_DISCLAIMER}${reset}`,
     "",
     `${bold}Summary:${reset} ${report.summary}`,

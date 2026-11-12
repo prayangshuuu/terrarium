@@ -27,7 +27,7 @@ describe("Settings & Specialist Provider Integrations OpenTUI Suite (A4 & A5)", 
 
     await setup.renderOnce();
     const frame = setup.captureCharFrame();
-    expect(frame).toContain("Settings & Specialist Provider");
+    expect(frame).toContain("SETTINGS & SPECIALIST PROVIDER");
     expect(frame).toContain("Workspace 10");
     expect(frame).toContain("[1] Model Providers");
     expect(frame).toContain("[2] CLI Integrations");
@@ -79,10 +79,9 @@ describe("Settings & Specialist Provider Integrations OpenTUI Suite (A4 & A5)", 
 
     await setup.renderOnce();
     const frame = setup.captureCharFrame();
-    expect(frame).toContain("SPECIALIST CODING-AGENT CLI RUNNERS");
-    expect(frame).toContain("claude-code-cli");
-    expect(frame).toContain("Supported Tools: edit, bash, grep, glob");
-    expect(frame).toContain("Non-interactive batch print mode (-p)");
+    expect(frame).toContain("UNIVERSAL CODING AGENT COMPATIBILITY MATRIX");
+    expect(frame).toContain("Claude Code CLI");
+    expect(frame).toContain("batch_print (-p)");
     expect(frame).toContain("SECURITY GUARD RAILS");
 
     await setup.dispose();

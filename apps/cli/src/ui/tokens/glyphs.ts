@@ -1,15 +1,16 @@
 /**
  * apps/cli/src/ui/tokens/glyphs.ts
  *
- * Terminal glyphs, status symbols, and ASCII fallbacks.
+ * Professional, emoji-free terminal glyphs, status symbols, and ASCII fallbacks.
  * Contributed by A4 (Senior CLI/TUI Designer) & A5 (Product Interface Designer).
+ * Strictly complies with PROMPT 23 Part D: Zero emoji in product UI.
  */
 
 export const GLYPHS = {
   // Brand & Identity
   brandLogo: "◈",
   brandDot: "●",
-  brandPulse: "⚡",
+  brandPulse: "*",
 
   // Navigation & Hierarchy
   navArrow: "▸",
@@ -19,39 +20,39 @@ export const GLYPHS = {
   navActiveMarker: "●",
   navInactiveMarker: "○",
 
-  // Lifecycle & Status
-  statusSuccess: "✓",
-  statusError: "✗",
-  statusWarning: "▲",
-  statusPending: "⏳",
+  // Lifecycle & Status (Clear Text & Restrained Unicode)
+  statusSuccess: "[OK]",
+  statusError: "[ERR]",
+  statusWarning: "[WARN]",
+  statusPending: "WAIT",
   statusRunning: "▶",
   statusIdle: "·",
   statusBlocked: "■",
   statusCancelled: "⊘",
 
-  // Workspace Icons
-  wsOverview: "◈",
-  wsEcosystem: "👥",
-  wsDepartments: "🏛",
-  wsConversations: "💬",
-  wsTasks: "📋",
-  wsStudio: "⚡",
-  wsMemory: "🧠",
-  wsReports: "📊",
-  wsAnalytics: "📈",
-  wsSettings: "⚙",
+  // Workspace Indicators (Numbered Monospace Badges)
+  wsOverview: "[1]",
+  wsEcosystem: "[2]",
+  wsDepartments: "[3]",
+  wsConversations: "[4]",
+  wsTasks: "[5]",
+  wsStudio: "[6]",
+  wsMemory: "[7]",
+  wsReports: "[8]",
+  wsAnalytics: "[9]",
+  wsSettings: "[0]",
 
   // UI Elements
   help: "?",
-  search: "🔍",
+  search: "/",
   filter: "▼",
-  lock: "🔒",
-  shield: "🛡",
-  folder: "📁",
-  file: "📄",
-  budget: "💰",
-  clock: "🕒",
-  sparkle: "✨",
+  lock: "[SEC]",
+  shield: "[POL]",
+  folder: "/",
+  file: "-",
+  budget: "$",
+  clock: "@",
+  sparkle: "*",
 
   // Tags & Labels
   simulatedTag: "[SIMULATED]",
@@ -65,7 +66,7 @@ export const GLYPHS = {
 export const ASCII_FALLBACKS = {
   brandLogo: "*",
   brandDot: "*",
-  brandPulse: ">",
+  brandPulse: "*",
   navArrow: ">",
   navArrowRight: ">",
   navArrowDown: "v",
@@ -93,8 +94,8 @@ export const ASCII_FALLBACKS = {
   help: "?",
   search: "/",
   filter: "v",
-  lock: "!",
-  shield: "#",
+  lock: "[SEC]",
+  shield: "[POL]",
   folder: "/",
   file: "-",
   budget: "$",

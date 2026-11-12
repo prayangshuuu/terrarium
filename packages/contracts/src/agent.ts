@@ -166,6 +166,8 @@ export interface AgentProfileFilter {
   readonly modelTier?: ModelTier;
   readonly limit?: number;
   readonly offset?: number;
+  readonly page?: number;
+  readonly pageSize?: number;
 }
 
 /**
@@ -237,6 +239,8 @@ export interface AgentProfileInput {
  */
 export interface AgentRegistry {
   register(profile: AgentProfileInput): Promise<Result<AgentProfile, TerrariumError>>;
+  unregister(idOrSlug: string): Promise<Result<boolean, NotFoundError | TerrariumError>>;
+  importProfiles(profiles: readonly AgentProfileInput[]): Promise<Result<number, TerrariumError>>;
   list(filter?: AgentProfileFilter): Promise<Result<readonly AgentProfile[], TerrariumError>>;
   search(query: AgentSearchQuery): Promise<Result<readonly AgentProfile[], TerrariumError>>;
   inspect(idOrSlug: string): Promise<Result<AgentProfile, NotFoundError | TerrariumError>>;

@@ -90,10 +90,10 @@ export async function handleStudioAnalyze(
 
     lines.push("", `${bold}Sensitive / Protected Files Shield:${reset}`);
     if (summary.sensitiveFiles.length === 0) {
-      lines.push(`  ${green}✓ No unprotected secrets or credentials detected in project tree.${reset}`);
+      lines.push(`  ${green}[OK] No unprotected secrets or credentials detected in project tree.${reset}`);
     } else {
       for (const sf of summary.sensitiveFiles) {
-        lines.push(`  ${red}⚠ [PROTECTED]${reset} ${sf.path} — ${sf.reason}`);
+        lines.push(`  ${red}[WARN] [PROTECTED]${reset} ${sf.path} — ${sf.reason}`);
       }
     }
 
@@ -256,7 +256,7 @@ export async function handleStudioApply(
   if (result.success) {
     return ok({
       output: [
-        `${green}✓ Successfully applied patch '${patchId}' to '${result.filePath}'${reset}`,
+        `${green}[OK] Successfully applied patch '${patchId}' to '${result.filePath}'${reset}`,
         `  ${bold}Rollback guidance:${reset} ${result.rollbackGuidance}`,
       ].join("\n"),
       result,
@@ -266,7 +266,7 @@ export async function handleStudioApply(
   return fail(
     new NotFoundError(
       "PatchApply",
-      `${red}✗ Failed to apply patch '${patchId}': ${result.error}${reset}`
+      `${red}[FAIL] Failed to apply patch '${patchId}': ${result.error}${reset}`
     )
   );
 }
@@ -295,7 +295,7 @@ export async function handleStudioRollback(
 
   if (result.success) {
     return ok({
-      output: `${green}✓ Successfully rolled back patch '${patchId}' for file '${result.filePath}'. Working tree restored.${reset}`,
+      output: `${green}[OK] Successfully rolled back patch '${patchId}' for file '${result.filePath}'. Working tree restored.${reset}`,
       result,
     });
   }
@@ -303,7 +303,7 @@ export async function handleStudioRollback(
   return fail(
     new NotFoundError(
       "PatchRollback",
-      `${red}✗ Failed to rollback patch '${patchId}': ${result.error}${reset}`
+      `${red}[FAIL] Failed to rollback patch '${patchId}': ${result.error}${reset}`
     )
   );
 }
@@ -337,12 +337,12 @@ export async function handleStudioTest(
     `${bold}Duration:${reset} ${result.durationMs}ms`,
     `${bold}Exit Code:${reset} ${result.exitCode}`,
     result.passed
-      ? `${green}✓ PASSED (${result.passedTests} passed, ${result.totalTests} total)${reset}`
-      : `${red}✗ FAILED (${result.failedTests} failed, ${result.passedTests} passed, ${result.totalTests} total)${reset}`,
+      ? `${green}[OK] PASSED (${result.passedTests} passed, ${result.totalTests} total)${reset}`
+      : `${red}[FAIL] FAILED (${result.failedTests} failed, ${result.passedTests} passed, ${result.totalTests} total)${reset}`,
   ];
 
   if (result.timedOut) {
-    lines.push(`${red}⚠ Test execution exceeded configured execution timeout boundary.${reset}`);
+    lines.push(`${red}[WARN] Test execution exceeded configured execution timeout boundary.${reset}`);
   }
 
   if (result.stdout.trim()) {

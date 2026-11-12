@@ -22,6 +22,7 @@ import {
   type BoundedTestRunResult,
 } from "@terrarium/contracts";
 import { THEME_COLORS } from "../tokens/colors.js";
+import { GLYPHS } from "../tokens/glyphs.js";
 import { useTerrariumUi } from "../state/ui-context.js";
 
 type StudioTab = "analysis" | "patches" | "diff" | "tests" | "sandbox";
@@ -134,7 +135,7 @@ export function StudioView() {
         <box flexDirection="row" justifyContent="space-between" alignItems="center">
           <box flexDirection="row" alignItems="center">
             <text style={{ fg: THEME_COLORS.statusInfo, attributes: TextAttributes.BOLD }}>
-              {"⚡ ENGINEERING STUDIO"}
+              {GLYPHS.wsStudio} {"ENGINEERING STUDIO"}
             </text>
             <text style={{ fg: THEME_COLORS.fgMuted }}>{" | Safe Code Workflow & Sandboxed Execution"}</text>
           </box>
@@ -202,7 +203,7 @@ export function StudioView() {
                 attributes: activeTab === "tests" ? TextAttributes.BOLD : undefined,
               }}
             >
-              {`[4] Test Runner ${testRun ? (testRun.passed ? "✓" : "✗") : ""}`}
+              {`[4] Test Runner ${testRun ? (testRun.passed ? "[OK]" : "[FAIL]") : ""}`}
             </text>
           </box>
           <box
@@ -328,7 +329,7 @@ function RepositoryScanTab({ analysis, isAnalyzing }: RepositoryScanTabProps) {
             {`Root: ${analysis.repoPath}`}
           </text>
           <text style={{ fg: THEME_COLORS.fgMuted }} marginTop={1}>
-            {`Working Tree: ${analysis.isClean ? "✓ Clean (No uncommitted changes)" : "⚠ Modified / Uncommitted edits detected"}`}
+            {`Working Tree: ${analysis.isClean ? "[OK] Clean (No uncommitted changes)" : "[WARN] Modified / Uncommitted edits detected"}`}
           </text>
           {analysis.branch && (
             <text style={{ fg: THEME_COLORS.fgSecondary }}>{`Branch: ${analysis.branch}`}</text>
@@ -418,13 +419,13 @@ function RepositoryScanTab({ analysis, isAnalyzing }: RepositoryScanTabProps) {
           </text>
           {analysis.sensitiveFiles.length === 0 ? (
             <text style={{ fg: THEME_COLORS.statusSuccess }} marginTop={1}>
-              {"✓ No unprotected secrets or credentials detected in project tree."}
+              {"[OK] No unprotected secrets or credentials detected in project tree."}
             </text>
           ) : (
             analysis.sensitiveFiles.map((sf) => (
               <box key={sf.path} flexDirection="column" marginTop={1}>
                 <text style={{ fg: THEME_COLORS.statusDanger, attributes: TextAttributes.BOLD }}>
-                  {`⚠ [PROTECTED] ${sf.path}`}
+                  {`[PROTECTED] ${sf.path}`}
                 </text>
                 <text style={{ fg: THEME_COLORS.fgDim }}>{`  ${sf.reason}`}</text>
               </box>
@@ -523,7 +524,7 @@ function PatchesListTab({ patches, selectedIndex, onSelect }: PatchesListTabProp
                   {`[${patch.status.toUpperCase()}]`}
                 </text>
                 <text style={{ fg: THEME_COLORS.fgDim }} marginTop={1}>
-                  {patch.requiresApproval ? "⚠ Requires Approval" : "Auto-executable"}
+                  {patch.requiresApproval ? "[APPROVAL REQUIRED]" : "Auto-executable"}
                 </text>
               </box>
             </box>
@@ -614,7 +615,7 @@ function DiffInspectorTab({ patch }: DiffInspectorTabProps) {
           >
             <box flexDirection="column">
               <text style={{ fg: THEME_COLORS.statusWarning, attributes: TextAttributes.BOLD }}>
-                {"⚠ Consequential Action Approval Gate"}
+                {"[APPROVAL GATE] Consequential Action"}
               </text>
               <text style={{ fg: THEME_COLORS.fgDim }}>
                 {"Direct working-tree modifications require explicit human authorization."}
@@ -638,7 +639,7 @@ function DiffInspectorTab({ patch }: DiffInspectorTabProps) {
         {patch.status === "applied" && (
           <box flexDirection="row" justifyContent="space-between" alignItems="center" marginTop={1}>
             <text style={{ fg: THEME_COLORS.statusSuccess }}>
-              {`✓ Patch applied at ${patch.appliedAt ? new Date(patch.appliedAt).toLocaleTimeString() : "recently"}`}
+              {`[OK] Patch applied at ${patch.appliedAt ? new Date(patch.appliedAt).toLocaleTimeString() : "recently"}`}
             </text>
             <text style={{ fg: THEME_COLORS.statusWarning, attributes: TextAttributes.BOLD }}>
               {"[u] Rollback Working Tree"}
@@ -757,7 +758,7 @@ function TestRunnerTab({ testRun, isRunning }: TestRunnerTabProps) {
                 attributes: TextAttributes.BOLD,
               }}
             >
-              {testRun.passed ? "✓ ALL TESTS PASSED" : testRun.timedOut ? "⚠ EXECUTION TIMED OUT" : "✗ TESTS FAILED"}
+              {testRun.passed ? "[OK] ALL TESTS PASSED" : testRun.timedOut ? "[WARN] EXECUTION TIMED OUT" : "[FAIL] TESTS FAILED"}
             </text>
             <text style={{ fg: THEME_COLORS.fgDim }}>
               {`Exit Code: ${testRun.exitCode} | Duration: ${testRun.durationMs}ms`}

@@ -148,6 +148,8 @@ export interface AgentProfileQueryOptions {
   readonly tag?: string;
   readonly limit?: number;
   readonly offset?: number;
+  readonly page?: number;
+  readonly pageSize?: number;
 }
 
 export interface AgentProfileRepository {

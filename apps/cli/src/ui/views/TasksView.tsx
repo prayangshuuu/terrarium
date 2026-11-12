@@ -186,7 +186,7 @@ export function TasksView() {
       // Mode 3: Task List View
       // =======================================================================
 
-      // 1. Navigation: Up / Down, j / k
+      // 1. Navigation: Up / Down, j / k, PgUp / PgDn, Home / End
       if (keyName === "up" || (!event.ctrl && !event.meta && keyName === "k")) {
         const nextIdx = Math.max(0, state.selectedTaskIndex - 1);
         controller.setTaskIndex(nextIdx);
@@ -196,6 +196,28 @@ export function TasksView() {
       if (keyName === "down" || (!event.ctrl && !event.meta && keyName === "j")) {
         const nextIdx = Math.min(filteredTasks.length - 1, state.selectedTaskIndex + 1);
         controller.setTaskIndex(nextIdx);
+        return;
+      }
+
+      if (keyName === "pageup") {
+        const nextIdx = Math.max(0, state.selectedTaskIndex - 12);
+        controller.setTaskIndex(nextIdx);
+        return;
+      }
+
+      if (keyName === "pagedown") {
+        const nextIdx = Math.min(filteredTasks.length - 1, state.selectedTaskIndex + 12);
+        controller.setTaskIndex(nextIdx);
+        return;
+      }
+
+      if (keyName === "home") {
+        controller.setTaskIndex(0);
+        return;
+      }
+
+      if (keyName === "end") {
+        controller.setTaskIndex(Math.max(0, filteredTasks.length - 1));
         return;
       }
 
@@ -692,6 +714,19 @@ export function TasksView() {
   const completedCount = state.tasks.filter((t) => t.status === "completed").length;
   const failedCount = state.tasks.filter((t) => t.status === "failed").length;
 
+  const PAGE_SIZE = 12;
+  const totalTasks = filteredTasks.length;
+  const totalPages = Math.max(1, Math.ceil(totalTasks / PAGE_SIZE));
+  const scrollOffset = Math.max(
+    0,
+    Math.min(
+      state.selectedTaskIndex - Math.floor(PAGE_SIZE / 2),
+      Math.max(0, totalTasks - PAGE_SIZE)
+    )
+  );
+  const visibleTasks = filteredTasks.slice(scrollOffset, scrollOffset + PAGE_SIZE);
+  const currentPage = Math.floor(state.selectedTaskIndex / PAGE_SIZE) + 1;
+
   return (
     <box flexDirection="column" paddingX={2} paddingY={1} flexGrow={1}>
       {/* 1. Header Banner */}
@@ -842,8 +877,8 @@ export function TasksView() {
           </box>
 
           {/* Task Rows (High volume support with page windowing) */}
-          {filteredTasks.slice(0, 15).map((task, idx) => {
-            const isSelected = idx === state.selectedTaskIndex;
+          {visibleTasks.map((task, idx) => {
+            const isSelected = (scrollOffset + idx) === state.selectedTaskIndex;
             const statusMeta = TASK_STATUS_UI[task.status];
             const priorityMeta = TASK_PRIORITY_UI[task.priority];
             const deptMeta = DEPARTMENT_UI[task.department];
@@ -884,6 +919,24 @@ export function TasksView() {
               </box>
             );
           })}
+
+          {/* Table Footer with Windowed Pagination Status */}
+          <box
+            flexDirection="row"
+            justifyContent="space-between"
+            borderStyle="single"
+            borderColor={THEME_COLORS.borderSubtle}
+            paddingX={1}
+            paddingTop={0}
+            marginTop={0}
+          >
+            <text fg={THEME_COLORS.fgSecondary}>
+              Showing tasks {filteredTasks.length === 0 ? 0 : scrollOffset + 1}–{Math.min(scrollOffset + PAGE_SIZE, filteredTasks.length)} of {filteredTasks.length}
+            </text>
+            <text fg={THEME_COLORS.fgMuted}>
+              Page {currentPage} of {totalPages} (PgUp/PgDn to jump)
+            </text>
+          </box>
         </box>
       )}
 

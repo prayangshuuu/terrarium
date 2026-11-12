@@ -87,14 +87,14 @@ export async function handleWorkflowRun(
   lines.push("");
 
   if (record.stage === "approval") {
-    lines.push("  ⚠️  WORKFLOW PAUSED AT APPROVAL GATE");
+    lines.push("  [GATE] WORKFLOW PAUSED AT APPROVAL GATE");
     lines.push(`  Approval Request ID: ${record.approvalRequestId}`);
     lines.push("  Run 'terrarium workflow resume <id> --approve' to proceed.");
     lines.push("");
   }
 
   if (record.error) {
-    lines.push(`  ❌ ERROR (${record.error.code}): ${record.error.message}`);
+    lines.push(`  [FAIL] ERROR (${record.error.code}): ${record.error.message}`);
     if (record.error.failureMode) {
       lines.push(`  Failure Mode: ${record.error.failureMode}`);
     }

@@ -40,15 +40,15 @@ export function formatBudgetCard(summary: BudgetSummary, config?: BudgetConfig |
   const totalCommittedSpend = summary.usedSpendUsd + summary.reservedSpendUsd;
   const spendPct = maxSpend > 0 ? Math.min(100, Math.round((totalCommittedSpend / maxSpend) * 100)) : 0;
 
-  let statusBadge = "✅ NORMAL";
+  let statusBadge = "[OK] NORMAL";
   if (summary.isExceeded) {
-    statusBadge = "🛑 LIMIT EXCEEDED";
+    statusBadge = "[EXCEEDED] LIMIT EXCEEDED";
   } else if (summary.isWarning) {
-    statusBadge = "⚠️  BUDGET WARNING (>80%)";
+    statusBadge = "[WARN] BUDGET WARNING (>80%)";
   }
 
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ 💰 BUDGET & RESOURCE LIMITS                                                │`);
+  lines.push(`│ [BUDGET] RESOURCE LIMITS                                                    │`);
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
   lines.push(`│ Scope:       ${summary.scope.toUpperCase().padEnd(61)} │`);
   lines.push(`│ Target ID:   ${summary.targetId.padEnd(61)} │`);
@@ -59,7 +59,7 @@ export function formatBudgetCard(summary: BudgetSummary, config?: BudgetConfig |
   const tokenBlocks = Math.floor(tokenPct / 5);
   const tokenGauge = `[${"█".repeat(tokenBlocks)}${"-".repeat(20 - tokenBlocks)}] ${tokenPct}% (${totalCommittedTokens.toLocaleString()} / ${maxTokens > 0 ? maxTokens.toLocaleString() : "unlimited"} tokens)`;
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ 📊 TOKEN UTILIZATION:                                                       │`);
+  lines.push(`│ [TOKENS] TOKEN UTILIZATION:                                                 │`);
   lines.push(`│   ${tokenGauge.padEnd(74)}│`);
   lines.push(`│   • Used: ${summary.usedTokens.toLocaleString()} tokens | Reserved: ${summary.reservedTokens.toLocaleString()} tokens`.padEnd(78) + `│`);
 
@@ -67,14 +67,14 @@ export function formatBudgetCard(summary: BudgetSummary, config?: BudgetConfig |
   const spendBlocks = Math.floor(spendPct / 5);
   const spendGauge = `[${"█".repeat(spendBlocks)}${"-".repeat(20 - spendBlocks)}] ${spendPct}% ($${totalCommittedSpend.toFixed(4)} / ${maxSpend > 0 ? `$${maxSpend.toFixed(2)}` : "unlimited"} USD)*`;
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ 💵 ESTIMATED SPEND:                                                         │`);
+  lines.push(`│ [SPEND] ESTIMATED SPEND:                                                    │`);
   lines.push(`│   ${spendGauge.padEnd(74)}│`);
   lines.push(`│   • Used: $${summary.usedSpendUsd.toFixed(4)} | Reserved: $${summary.reservedSpendUsd.toFixed(4)}`.padEnd(78) + `│`);
   lines.push(`│   * ${ESTIMATE_DISCLAIMER.slice(0, 72).padEnd(72)}│`);
 
   // Operational Bounds
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ ⚙️  OPERATIONAL BOUNDS & POLICIES:                                            │`);
+  lines.push(`│ [POLICY] OPERATIONAL BOUNDS & POLICIES:                                     │`);
   const concurrencyStr = `Active Concurrency: ${summary.activeConcurrency} / ${config?.maxConcurrency ?? "unlimited"} slots`;
   const durationStr = `Max Duration: ${config?.maxDurationMs ? `${config.maxDurationMs / 1000}s` : "unlimited"}`;
   const onLimitStr = `On Limit Action: ${(config?.onLimitExceeded ?? "stop").toUpperCase()}`;
@@ -96,21 +96,21 @@ export function formatBudgetCard(summary: BudgetSummary, config?: BudgetConfig |
 export function formatRoutingCard(decision: RoutingDecision, criteria?: RoutingCriteria): string {
   const lines: string[] = [];
 
-  let tierGlyph = "⚖️  STANDARD";
-  if (decision.tier === "fast") tierGlyph = "⚡ FAST";
-  if (decision.tier === "advanced") tierGlyph = "🧠 ADVANCED";
+  let tierGlyph = "[STD] STANDARD";
+  if (decision.tier === "fast") tierGlyph = "[FAST] FAST";
+  if (decision.tier === "advanced") tierGlyph = "[ADV] ADVANCED";
 
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ 🧭 MODEL ROUTING DECISION                                                   │`);
+  lines.push(`│ [ROUTING] MODEL ROUTING DECISION                                            │`);
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
   lines.push(`│ Model:       ${(decision.providerId + "/" + decision.modelId).padEnd(61)} │`);
   lines.push(`│ Tier:        ${tierGlyph.padEnd(61)} │`);
-  lines.push(`│ Fallback:    ${(decision.isFallback ? "⚠️  YES (Degraded / Fallback)" : "✅ NO (Optimal Selection)").padEnd(61)} │`);
+  lines.push(`│ Fallback:    ${(decision.isFallback ? "[WARN] YES (Degraded / Fallback)" : "[OK] NO (Optimal Selection)").padEnd(61)} │`);
   lines.push(`│ Est. Rate:   $${decision.estimatedCostPer1kTokens.toFixed(6)} / 1k tokens (estimate)*`.padEnd(77) + `│`);
 
   if (criteria) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ 🎯 ROUTING CRITERIA:                                                        │`);
+    lines.push(`│ [CRITERIA] ROUTING CRITERIA:                                                │`);
     lines.push(`│   • Complexity:  ${criteria.complexity.toUpperCase().padEnd(58)}│`);
     lines.push(`│   • Risk Level:  ${criteria.riskLevel.toUpperCase().padEnd(58)}│`);
     if (criteria.requiredCapabilities && criteria.requiredCapabilities.length > 0) {
@@ -119,7 +119,7 @@ export function formatRoutingCard(decision: RoutingDecision, criteria?: RoutingC
   }
 
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ 💡 TRANSPARENT RATIONALE:                                                   │`);
+  lines.push(`│ [RATIONALE] TRANSPARENT RATIONALE:                                          │`);
   const wrapped = decision.rationale.length > 70 ? `${decision.rationale.slice(0, 68)}...` : decision.rationale;
   lines.push(`│   ${wrapped.padEnd(74)}│`);
   lines.push(`│   * ${ESTIMATE_DISCLAIMER.slice(0, 72).padEnd(72)}│`);

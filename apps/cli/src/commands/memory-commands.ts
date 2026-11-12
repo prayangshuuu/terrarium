@@ -45,7 +45,7 @@ export function formatMemoryCard(item: MemoryItem): string {
   const categoryMeta = MEMORY_CATEGORY_UI[item.category];
 
   lines.push(`┌─────────────────────────────────────────────────────────────────────────────┐`);
-  lines.push(`│ 📋 PROJECT MEMORY: ${item.key.padEnd(55)} │`);
+  lines.push(`│ [MEMORY] PROJECT MEMORY: ${item.key.padEnd(51)} │`);
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
   lines.push(`│ ID:          ${item.id.padEnd(61)} │`);
   lines.push(`│ Category:    ${(categoryMeta.icon + " " + categoryMeta.label).padEnd(61)} │`);
@@ -66,7 +66,7 @@ export function formatMemoryCard(item: MemoryItem): string {
   // Provenance details
   if (item.provenance) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ 🔍 PROVENANCE                                                               │`);
+    lines.push(`│ [PROVENANCE]                                                                │`);
     lines.push(`│ Source:      ${item.provenance.sourceType.padEnd(61)} │`);
     if (item.provenance.sourceReference) {
       lines.push(`│ Reference:   ${item.provenance.sourceReference.padEnd(61)} │`);
@@ -79,7 +79,7 @@ export function formatMemoryCard(item: MemoryItem): string {
   // Conflict warning banner
   if (item.isConflicted) {
     lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-    lines.push(`│ ⚠️  CONFLICT DETECTED — UNRESOLVED DIVERGENCE                                │`);
+    lines.push(`│ [WARN] CONFLICT DETECTED — UNRESOLVED DIVERGENCE                            │`);
     if (item.conflictWithId) {
       lines.push(`│ Proposed By: ${item.conflictWithId.padEnd(61)} │`);
     }
@@ -92,7 +92,7 @@ export function formatMemoryCard(item: MemoryItem): string {
 
   // Content
   lines.push(`├─────────────────────────────────────────────────────────────────────────────┤`);
-  lines.push(`│ 📝 CONTENT:                                                                 │`);
+  lines.push(`│ [CONTENT]:                                                                  │`);
   const contentLines = item.content.split("\n");
   for (const cLine of contentLines) {
     const wrapped = cLine.length > 73 ? `${cLine.slice(0, 70)}...` : cLine;
@@ -148,7 +148,7 @@ export async function handleMemoryList(
   for (const item of items) {
     const freshness = MEMORY_FRESHNESS_UI[item.freshnessStatus ?? "fresh"];
     const categoryMeta = MEMORY_CATEGORY_UI[item.category];
-    const statusGlyph = item.isConflicted ? "⚠️  CONFLICT" : `${freshness.glyph} ${freshness.shortLabel}`;
+    const statusGlyph = item.isConflicted ? "[CONFLICT]" : `${freshness.glyph} ${freshness.shortLabel}`;
     const categoryLabel = `${categoryMeta.icon} ${item.category}`;
 
     const row = `  ${item.id.padEnd(24)} ${statusGlyph.padEnd(10)} ${categoryLabel.padEnd(24)} ${item.key.padEnd(28)} ${item.confidence.padEnd(14)}`;
@@ -205,11 +205,11 @@ export async function handleMemorySet(
 
   if (res.data.isConflicted) {
     return ok(
-      `⚠️  Recorded with CONFLICT: Memory '${res.data.key}' conflicts with existing assertion. Run 'terrarium memory show ${res.data.id}' to inspect.`
+      `[WARN] Recorded with CONFLICT: Memory '${res.data.key}' conflicts with existing assertion. Run 'terrarium memory show ${res.data.id}' to inspect.`
     );
   }
 
-  return ok(`✓ Recorded memory item '${res.data.key}' (ID: ${res.data.id}, category: ${res.data.category}).`);
+  return ok(`[OK] Recorded memory item '${res.data.key}' (ID: ${res.data.id}, category: ${res.data.category}).`);
 }
 
 /**
@@ -234,7 +234,7 @@ export async function handleMemoryCorrect(
     return ok(JSON.stringify(res.data, null, 2));
   }
 
-  return ok(`✓ Successfully corrected memory item '${res.data.key}' (ID: ${res.data.id}).`);
+  return ok(`[OK] Successfully corrected memory item '${res.data.key}' (ID: ${res.data.id}).`);
 }
 
 /**
@@ -254,12 +254,12 @@ export async function handleMemoryDelete(
   if (options?.archiveOnly) {
     const res = await memoryManager.archiveMemory(id, caller);
     if (!res.success) return fail(res.error);
-    return ok(`✓ Archived memory item '${id}'.`);
+    return ok(`[OK] Archived memory item '${id}'.`);
   }
 
   const res = await memoryManager.deleteMemory(id, caller);
   if (!res.success) return fail(res.error);
-  return ok(`✓ Permanently deleted memory item '${id}'.`);
+  return ok(`[OK] Permanently deleted memory item '${id}'.`);
 }
 
 /**
@@ -284,11 +284,11 @@ export async function handleMemoryConflicts(
   }
 
   if (conflicts.length === 0) {
-    return ok("✓ No active memory conflicts detected in project.");
+    return ok("[OK] No active memory conflicts detected in project.");
   }
 
   const lines: string[] = [];
-  lines.push(`\n⚠️  ACTIVE MEMORY CONFLICTS (${conflicts.length} unresolved):`);
+  lines.push(`\n[WARN] ACTIVE MEMORY CONFLICTS (${conflicts.length} unresolved):`);
   lines.push("─".repeat(80));
 
   for (const c of conflicts) {

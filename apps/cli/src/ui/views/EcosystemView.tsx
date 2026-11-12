@@ -81,6 +81,18 @@ export function EcosystemView() {
         return;
       }
 
+      if (keyName === "pageup" || keyName === "page_up") {
+        const nextIdx = Math.max(0, state.selectedAgentIndex - 12);
+        controller.setEcosystemIndex(nextIdx);
+        return;
+      }
+
+      if (keyName === "pagedown" || keyName === "page_down") {
+        const nextIdx = Math.min(filteredProfiles.length - 1, state.selectedAgentIndex + 12);
+        controller.setEcosystemIndex(nextIdx);
+        return;
+      }
+
       // 3. Inspect Selected Profile: Enter / Space / 'i'
       if (keyName === "return" || keyName === "enter" || keyName === "space" || (!event.ctrl && !event.meta && keyName === "i")) {
         if (selectedProfile) {
@@ -156,6 +168,18 @@ export function EcosystemView() {
   useKeyboard(handleKeyboard);
 
   const isCleanInstall = state.ecosystemProfiles.length === 0;
+  const PAGE_SIZE = 12;
+  const totalProfiles = filteredProfiles.length;
+  const totalPages = Math.max(1, Math.ceil(totalProfiles / PAGE_SIZE));
+  const scrollOffset = Math.max(
+    0,
+    Math.min(
+      state.selectedAgentIndex - Math.floor(PAGE_SIZE / 2),
+      Math.max(0, totalProfiles - PAGE_SIZE)
+    )
+  );
+  const visibleProfiles = filteredProfiles.slice(scrollOffset, scrollOffset + PAGE_SIZE);
+  const currentPage = Math.floor(state.selectedAgentIndex / PAGE_SIZE) + 1;
 
   return (
     <box flexDirection="column" paddingX={2} paddingY={1} flexGrow={1}>
@@ -262,7 +286,7 @@ export function EcosystemView() {
               This is a clean installation. No agent profiles have been seeded or registered in the database.
             </text>
             <text fg={THEME_COLORS.fgMuted} marginTop={1}>
-              To seed the curated 15-profile virtual organization catalog across all 10 departments:
+              To seed the curated virtual organization catalog across all 10 departments:
             </text>
             <text fg={THEME_COLORS.statusInfo} marginTop={0}>
               $ terrarium agent seed
@@ -316,9 +340,9 @@ export function EcosystemView() {
             <box flexGrow={1}><text fg={THEME_COLORS.fgMuted} attributes={TextAttributes.BOLD}>PERSONA / TAGS</text></box>
           </box>
 
-          {/* Directory Rows */}
-          {filteredProfiles.slice(0, 14).map((profile, idx) => {
-            const isSelected = idx === state.selectedAgentIndex;
+          {/* Directory Rows with Windowed Scrolling */}
+          {visibleProfiles.map((profile, idx) => {
+            const isSelected = (scrollOffset + idx) === state.selectedAgentIndex;
             const lifecycleStatus = controller.getAgentLifecycleStatus(profile);
             const statusUi = AGENT_LIFECYCLE_UI[lifecycleStatus];
             const deptUi = DEPARTMENT_UI[profile.department];
@@ -403,13 +427,30 @@ export function EcosystemView() {
               </box>
             );
           })}
+
+          {/* Table Footer with Windowed Pagination Status */}
+          <box
+            flexDirection="row"
+            justifyContent="space-between"
+            borderStyle="single"
+            borderColor={THEME_COLORS.borderSubtle}
+            paddingTop={0}
+            marginTop={1}
+          >
+            <text fg={THEME_COLORS.fgSecondary}>
+              Showing profiles {totalProfiles === 0 ? 0 : scrollOffset + 1}-{Math.min(totalProfiles, scrollOffset + PAGE_SIZE)} of {totalProfiles}
+            </text>
+            <text fg={THEME_COLORS.fgMuted}>
+              Page {currentPage} of {totalPages} • [↑/↓] Row • [PgUp/PgDn] Page • [Enter] Inspect
+            </text>
+          </box>
         </box>
       )}
 
       {/* 4. Navigation & Keyboard Hints */}
       <box flexDirection="row" justifyContent="space-between" alignItems="center" marginTop={1}>
         <text fg={THEME_COLORS.fgDim} attributes={TextAttributes.DIM}>
-          [↑/↓, j/k] Navigate  •  [Enter/Space] Inspect Profile  •  [d] Cycle Dept  •  [f] Cycle Status  •  [Esc] Clear
+          [↑/↓, j/k] Navigate  •  [PgUp/PgDn] Page  •  [Enter/Space] Inspect Profile  •  [d] Cycle Dept  •  [f] Cycle Status  •  [Esc] Clear
         </text>
         <text fg={THEME_COLORS.statusAccent} attributes={TextAttributes.DIM}>
           Agent Identity vs Execution • PLAN.md Section 4.1

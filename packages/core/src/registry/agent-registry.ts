@@ -185,15 +185,62 @@ export class DefaultAgentRegistry implements AgentRegistry {
       return a.name.localeCompare(b.name);
     });
 
-    if (filter.offset !== undefined) {
-      profiles = profiles.slice(filter.offset);
+    const pageSize = filter.pageSize ?? filter.limit;
+    const offset =
+      filter.offset ??
+      (filter.page !== undefined && pageSize !== undefined
+        ? Math.max(0, (filter.page - 1) * pageSize)
+        : undefined);
+
+    if (offset !== undefined) {
+      profiles = profiles.slice(offset);
     }
 
-    if (filter.limit !== undefined) {
-      profiles = profiles.slice(0, filter.limit);
+    if (pageSize !== undefined) {
+      profiles = profiles.slice(0, pageSize);
     }
 
     return ok(profiles);
+  }
+
+  /**
+   * Safely unregisters and removes an agent profile from memory and storage.
+   * Does NOT affect past execution records or historical reports.
+   */
+  async unregister(idOrSlug: string): Promise<Result<boolean, NotFoundError | TerrariumError>> {
+    const profile = this.profilesById.get(idOrSlug) ?? this.profilesBySlug.get(idOrSlug);
+    if (!profile) {
+      return fail(new ProfileNotFoundError(idOrSlug));
+    }
+
+    this.profilesById.delete(profile.id);
+    this.profilesBySlug.delete(profile.slug);
+
+    if (this.repository) {
+      const deleteRes = await this.repository.delete(profile.id);
+      if (!deleteRes.success) {
+        return fail(deleteRes.error);
+      }
+    }
+
+    return ok(true);
+  }
+
+  /**
+   * Imports multiple agent profiles in bulk, validating each against contracts.
+   * Does NOT start any agent processes or invoke providers.
+   */
+  async importProfiles(profiles: readonly AgentProfileInput[]): Promise<Result<number, TerrariumError>> {
+    let imported = 0;
+    for (const input of profiles) {
+      const res = await this.register(input);
+      if (res.success) {
+        imported++;
+      } else {
+        return fail(res.error);
+      }
+    }
+    return ok(imported);
   }
 
   /**

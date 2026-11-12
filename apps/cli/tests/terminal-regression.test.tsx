@@ -72,7 +72,7 @@ describe("OpenTUI Terminal Viewport Regression & Content Suite (A4)", () => {
 
     await setup.renderOnce();
     const frame = setup.captureCharFrame();
-    expect(frame).toContain("Settings & Specialist Provider");
+    expect(frame).toContain("SETTINGS & SPECIALIST PROVIDER");
     expect(frame).toContain("[1] Model Providers");
     expect(frame).toContain("[2] CLI Integrations");
     await setup.dispose();
@@ -92,7 +92,7 @@ describe("OpenTUI Terminal Viewport Regression & Content Suite (A4)", () => {
 
     await setup.renderOnce();
     const frame = setup.captureCharFrame();
-    expect(frame).toContain("Reports & Evidence");
+    expect(frame).toContain("REPORTS & EVIDENCE");
     await setup.dispose();
   });
 

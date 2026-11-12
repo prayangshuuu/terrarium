@@ -45,7 +45,7 @@ describe("UI Design Tokens & Palette Suite (A5)", () => {
     expect(getGlyph("brandLogo", true)).toBe("◈");
     expect(getGlyph("brandLogo", false)).toBe("*");
 
-    expect(getGlyph("statusSuccess", true)).toBe("✓");
+    expect(getGlyph("statusSuccess", true)).toBe("[OK]");
     expect(getGlyph("statusSuccess", false)).toBe("OK");
 
     expect(getGlyph("simulatedTag", true)).toBe("[SIMULATED]");

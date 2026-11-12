@@ -207,7 +207,7 @@ export function formatApprovalCard(approval: ApprovalRequest, useColor = false):
   }
 
   card += `${bold}├────────────────────────────────────────────────────────────────────────────┤${reset}\n`;
-  card += `│ ${bold}${red}⚠️  CONSEQUENCE WARNING:${reset}${" ".repeat(51)}│\n`;
+  card += `│ ${bold}${red}[CONSEQUENCE WARNING]:${reset}${" ".repeat(50)}│\n`;
   card += `│   ${bold}${consequence.title}${reset}${" ".repeat(Math.max(0, 71 - consequence.title.length))}│\n`;
   card += `│   ${dim}${consequence.summary}${reset}${" ".repeat(Math.max(0, 71 - consequence.summary.length))}│\n`;
 

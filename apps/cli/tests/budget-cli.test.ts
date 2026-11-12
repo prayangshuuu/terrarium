@@ -45,7 +45,7 @@ describe("CLI Budget & Model Routing Commands Suite (A4 & A5)", () => {
       const res = await handleBudgetShow("task", "task-cli-1", budgetManager);
       expect(res.success).toBe(true);
       if (res.success) {
-        expect(res.data).toContain("BUDGET & RESOURCE LIMITS");
+        expect(res.data).toContain("[BUDGET] RESOURCE LIMITS");
         expect(res.data).toContain("TASK");
         expect(res.data).toContain("task-cli-1");
         expect(res.data).toContain("TOKEN UTILIZATION");

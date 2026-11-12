@@ -193,7 +193,7 @@ describe("Engineering Studio OpenTUI View Suite (A3, A4 & A5)", () => {
     expect(frame).toContain("2 Total Patches");
     expect(frame).toContain("src/index.ts");
     expect(frame).toContain("[PROPOSED]");
-    expect(frame).toContain("Requires Approval");
+    expect(frame).toContain("[APPROVAL REQUIRED]");
     expect(frame).toContain("src/utils.ts");
     expect(frame).toContain("[APPLIED]");
 
@@ -220,7 +220,7 @@ describe("Engineering Studio OpenTUI View Suite (A3, A4 & A5)", () => {
 
     expect(frame).toContain("File: src/index.ts");
     expect(frame).toContain("STATUS: PROPOSED");
-    expect(frame).toContain("Consequential Action Approval Gate");
+    expect(frame).toContain("[APPROVAL GATE] Consequential Action");
     expect(frame).toContain("[a] Approve & Apply");
     expect(frame).toContain("[r] Reject");
     expect(frame).toContain("--- a/src/index.ts");
