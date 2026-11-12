@@ -270,4 +270,21 @@ export interface UiState {
   readonly isSimulatingCustomer: boolean;
   readonly isExportingReport: boolean;
   readonly exportedReportPath: string | null;
+
+  // Prompt 19: Settings & Provider Integrations (Workspace 10)
+  readonly settingsActiveTab: SettingsActiveTab;
+  readonly selectedProviderSettingIndex: number;
+  readonly selectedIntegrationSettingIndex: number;
+  readonly providerDiagnostics: Readonly<Record<string, ProviderDiagnosticEntry>>;
+  readonly isTestingProvider: boolean;
+}
+
+export type SettingsActiveTab = "providers" | "integrations" | "rankings" | "diagnostics";
+
+export interface ProviderDiagnosticEntry {
+  readonly provider: string;
+  readonly isHealthy: boolean;
+  readonly latencyMs: number;
+  readonly message?: string;
+  readonly timestamp: string;
 }

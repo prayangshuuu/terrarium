@@ -51,6 +51,7 @@ import {
   type PatchRollbackResult,
   type Report,
   type ReportType,
+  type ProviderType,
 } from "@terrarium/contracts";
 import type { CoreEngine } from "@terrarium/core";
 import {
@@ -65,6 +66,8 @@ import {
   type UiState,
   type ViewMode,
   type ReportsActiveTab,
+  type SettingsActiveTab,
+  type ProviderDiagnosticEntry,
 } from "./ui-state-types.js";
 
 export interface UiStateControllerOptions {
@@ -213,6 +216,13 @@ export class UiStateController {
       isSimulatingCustomer: false,
       isExportingReport: false,
       exportedReportPath: null,
+
+      // Prompt 19: Settings & Provider Integrations (Workspace 10)
+      settingsActiveTab: "providers",
+      selectedProviderSettingIndex: 0,
+      selectedIntegrationSettingIndex: 0,
+      providerDiagnostics: {},
+      isTestingProvider: false,
     };
 
     // If initial task exists, initialize its detail
@@ -1552,6 +1562,36 @@ export class UiStateController {
         },
       },
       {
+        id: "settings-providers",
+        title: "Settings: View Model Providers",
+        subtitle: "Inspect frontier model configurations and credentials",
+        category: "view",
+        action: () => {
+          this.navigate("settings");
+          this.setSettingsTab("providers");
+        },
+      },
+      {
+        id: "settings-rankings",
+        title: "Settings: Specialist Integration Rankings",
+        subtitle: "View prioritized ranking matrix by user value and risk",
+        category: "view",
+        action: () => {
+          this.navigate("settings");
+          this.setSettingsTab("rankings");
+        },
+      },
+      {
+        id: "settings-test-provider",
+        title: "Settings: Test Provider Connection",
+        subtitle: "Execute live reachability diagnostics for active provider",
+        category: "action",
+        action: () => {
+          this.navigate("settings");
+          void this.testSelectedProvider();
+        },
+      },
+      {
         id: "action-reconnect-activity",
         title: "Reconnect Activity Feed",
         subtitle: "Replay missed events from persistence log",
@@ -2095,6 +2135,80 @@ export class UiStateController {
     } finally {
       this.setState({ isExportingReport: false });
     }
+  }
+
+  // =========================================================================
+  // Prompt 19: Settings, Providers & Specialist Integrations (Workspace 10)
+  // =========================================================================
+
+  public setSettingsTab(tab: SettingsActiveTab): void {
+    this.setState({ settingsActiveTab: tab });
+  }
+
+  public setSelectedProviderSettingIndex(index: number): void {
+    this.setState({ selectedProviderSettingIndex: index });
+  }
+
+  public setSelectedIntegrationSettingIndex(index: number): void {
+    this.setState({ selectedIntegrationSettingIndex: index });
+  }
+
+  public async testProviderConnection(providerType: ProviderType): Promise<void> {
+    if (!this.engine?.providers) {
+      this.setAlert("Provider registry not initialized", "warning");
+      return;
+    }
+
+    const adapter = this.engine.providers.getAdapter(providerType);
+    if (!adapter) {
+      this.setAlert(`No adapter registered for provider '${providerType}'`, "warning");
+      return;
+    }
+
+    this.setState({ isTestingProvider: true });
+    try {
+      const healthRes = await adapter.checkHealth();
+      const entry: ProviderDiagnosticEntry = healthRes.success
+        ? {
+            provider: providerType,
+            isHealthy: healthRes.data.isHealthy,
+            latencyMs: healthRes.data.latencyMs,
+            message: healthRes.data.message,
+            timestamp: healthRes.data.timestamp,
+          }
+        : {
+            provider: providerType,
+            isHealthy: false,
+            latencyMs: 0,
+            message: healthRes.error.message,
+            timestamp: new Date().toISOString(),
+          };
+
+      const updated = {
+        ...this.state.providerDiagnostics,
+        [providerType]: entry,
+      };
+
+      this.setState({
+        providerDiagnostics: updated,
+        isTestingProvider: false,
+      });
+
+      if (entry.isHealthy) {
+        this.setAlert(`${providerType.toUpperCase()} is connected (${entry.latencyMs}ms)`, "success");
+      } else {
+        this.setAlert(`${providerType.toUpperCase()}: ${entry.message ?? "Offline"}`, "warning");
+      }
+    } catch (err: unknown) {
+      this.setState({ isTestingProvider: false });
+      this.setAlert(`Test failed: ${err instanceof Error ? err.message : String(err)}`, "error");
+    }
+  }
+
+  public async testSelectedProvider(): Promise<void> {
+    const providers: ProviderType[] = ["anthropic", "ollama", "openai", "gemini", "custom"];
+    const target = providers[this.state.selectedProviderSettingIndex] ?? "anthropic";
+    await this.testProviderConnection(target);
   }
 
   public destroy(): void {

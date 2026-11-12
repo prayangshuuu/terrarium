@@ -20,6 +20,7 @@ export type TerrariumErrorCode =
   | "PROVIDER_NETWORK_ERROR"
   | "PROVIDER_INVALID_REQUEST_ERROR"
   | "PROVIDER_SERVER_ERROR"
+  | "PROVIDER_NOT_FOUND_ERROR"
   | "PROVIDER_UNAUTHORIZED_CALL_ERROR"
   | "DELEGATION_LIMIT_EXCEEDED"
   | "DATABASE_ERROR"
@@ -358,6 +359,17 @@ export class ProviderServerError extends ProviderError {
   constructor(message: string, provider: string, statusCode = 500, model?: string) {
     super(message, provider, true, model, statusCode, "PROVIDER_SERVER_ERROR");
     this.name = "ProviderServerError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+/**
+ * Thrown when a provider adapter, executable CLI binary, or model endpoint cannot be found (404).
+ */
+export class ProviderNotFoundError extends ProviderError {
+  constructor(message: string, provider: string, model?: string) {
+    super(message, provider, false, model, 404, "PROVIDER_NOT_FOUND_ERROR");
+    this.name = "ProviderNotFoundError";
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }

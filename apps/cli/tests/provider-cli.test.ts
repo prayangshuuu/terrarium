@@ -15,6 +15,7 @@ import {
 import {
   handleProviderInfo,
   handleProviderList,
+  handleProviderRankings,
   handleProviderSetupGuide,
   handleProviderTest,
 } from "../src/commands/provider-commands.ts";
@@ -91,5 +92,37 @@ describe("CLI Provider Commands Suite", () => {
     const ollamaGuide = handleProviderSetupGuide("ollama");
     expect(ollamaGuide).toContain("Configuring Provider: OLLAMA");
     expect(ollamaGuide).toContain("http://localhost:11434");
+
+    const anthropicGuide = handleProviderSetupGuide("anthropic");
+    expect(anthropicGuide).toContain("Configuring Provider: ANTHROPIC");
+    expect(anthropicGuide).toContain("ANTHROPIC_API_KEY");
+
+    const geminiGuide = handleProviderSetupGuide("gemini");
+    expect(geminiGuide).toContain("Configuring Provider: GEMINI");
+    expect(geminiGuide).toContain("GEMINI_API_KEY");
+  });
+
+  it("renders specialist integration priority rankings table", () => {
+    const rankingsRes = handleProviderRankings({ useColor: false });
+    expect(rankingsRes.success).toBe(true);
+    if (rankingsRes.success) {
+      expect(rankingsRes.data.output).toContain("Terrarium Specialist Integration Priority Matrix");
+      expect(rankingsRes.data.output).toContain("anthropic");
+      expect(rankingsRes.data.output).toContain("ollama");
+      expect(rankingsRes.data.output).toContain("claude-code-cli");
+      expect(rankingsRes.data.rankings.length).toBe(5);
+    }
+  });
+
+  it("outputs structured JSON for integration priority rankings", () => {
+    const rankingsRes = handleProviderRankings({ json: true });
+    expect(rankingsRes.success).toBe(true);
+    if (rankingsRes.success) {
+      const parsed = JSON.parse(rankingsRes.data.output);
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed.length).toBe(5);
+      expect(parsed[0].id).toBe("anthropic");
+      expect(parsed[0].rank).toBe(1);
+    }
   });
 });

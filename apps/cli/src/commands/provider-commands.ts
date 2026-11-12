@@ -11,6 +11,8 @@ import {
   PROVIDER_TYPES,
   type Result,
   type TerrariumError,
+  type SpecialistIntegration,
+  INTEGRATION_RANKINGS,
   ok,
   fail,
 } from "@terrarium/contracts";
@@ -32,6 +34,15 @@ export interface ProviderSummaryView {
   readonly baseUrl: string;
   readonly status: string;
   readonly availableModels: number;
+}
+
+export interface CliAdapterSummaryView {
+  readonly id: string;
+  readonly name: string;
+  readonly kind: "coding_agent_cli";
+  readonly status: string;
+  readonly supportedTools: readonly string[];
+  readonly defaultTimeoutMs: number;
 }
 
 /**
@@ -98,9 +109,73 @@ export async function handleProviderList(
     table += `${pPad} ${statPad} ${credPad} ${srcPad} ${defPad} ${url}\n`;
   }
 
+  // CLI Specialist Integrations section
+  const cliAdapters = registry?.listCliAdapters() ?? [];
+  if (cliAdapters.length > 0) {
+    table += `\n${bold}Specialist Coding-Agent CLI Integrations${reset}\n`;
+    table += `${dim}ID                 Name                                Status     Timeout   Tools${reset}\n`;
+    table += `${dim}──────────────────────────────────────────────────────────────────────────────────${reset}\n`;
+    for (const c of cliAdapters) {
+      const idPad = c.id.padEnd(18);
+      const namePad = c.name.padEnd(35);
+      const statPad = `${green}ready${reset}     `;
+      const timeoutPad = "120s".padEnd(9);
+      const tools = "edit, bash, grep, glob";
+      table += `${idPad} ${namePad} ${statPad} ${timeoutPad} ${tools}\n`;
+    }
+  }
+
   return ok({
     output: table,
     providers: summaries,
+  });
+}
+
+/**
+ * Displays prioritized ranking matrix of integrations evaluated by user value,
+ * risk, maintenance, and support status per PROMPT 19 requirements (A4/A5).
+ */
+export function handleProviderRankings(
+  options: ProviderCommandOptions = {}
+): Result<{ output: string; rankings: readonly SpecialistIntegration[] }, TerrariumError> {
+  if (options.json) {
+    return ok({
+      output: JSON.stringify(INTEGRATION_RANKINGS, null, 2),
+      rankings: INTEGRATION_RANKINGS,
+    });
+  }
+
+  const useColor = options.useColor ?? false;
+  const bold = useColor ? "\x1b[1m" : "";
+  const green = useColor ? "\x1b[32m" : "";
+  const yellow = useColor ? "\x1b[33m" : "";
+  const cyan = useColor ? "\x1b[36m" : "";
+  const dim = useColor ? "\x1b[2m" : "";
+  const reset = useColor ? "\x1b[0m" : "";
+
+  let table = `\n${bold}Terrarium Specialist Integration Priority Matrix (PLAN.md Section 12 & 24)${reset}\n`;
+  table += `${dim}Rank  Integration           Kind              Value     Risk      Support           Connection${reset}\n`;
+  table += `${dim}──────────────────────────────────────────────────────────────────────────────────────────${reset}\n`;
+
+  for (const item of INTEGRATION_RANKINGS) {
+    const rankPad = `#${item.rank}`.padEnd(5);
+    const idPad = item.id.padEnd(21);
+    const kindPad = item.kind.padEnd(17);
+    const valueColor = item.userValue === "critical" ? green : item.userValue === "high" ? cyan : yellow;
+    const valuePad = `${valueColor}${item.userValue.padEnd(9)}${reset}`;
+    const riskColor = item.risk === "low" ? green : item.risk === "medium" ? yellow : "\x1b[31m";
+    const riskPad = `${riskColor}${item.risk.padEnd(9)}${reset}`;
+    const supportPad = item.supportStatus.replace("_", " ").padEnd(17);
+    const connPad = item.connectionMode.replace("_", " ");
+
+    table += `${rankPad} ${idPad} ${kindPad} ${valuePad} ${riskPad} ${supportPad} ${connPad}\n`;
+  }
+
+  table += `\n${dim}Run 'terrarium provider setup <id>' to inspect connection instructions and security scopes.${reset}\n`;
+
+  return ok({
+    output: table,
+    rankings: INTEGRATION_RANKINGS,
   });
 }
 
@@ -161,7 +236,26 @@ export async function handleProviderInfo(
   if (models.length > 0) {
     card += `\n${bold}Available Models (${models.length}):${reset}\n`;
     for (const m of models) {
-      card += `  • ${cyan}${m.id.padEnd(20)}${reset} [${m.tier}] ${dim}(ctx: ${m.contextWindow.toLocaleString()})${reset}\n`;
+      card += `  • ${cyan}${m.id.padEnd(28)}${reset} [${m.tier}] ${dim}(ctx: ${m.contextWindow.toLocaleString()})${reset}\n`;
+    }
+  }
+
+  // Specialist integration security, scopes, and limitations metadata
+  const integrationMeta = INTEGRATION_RANKINGS.find((r) => r.id === providerType || r.providerType === providerType);
+  if (integrationMeta) {
+    card += `\n${bold}Integration Profile & Least-Privilege Scopes:${reset}\n`;
+    card += `  Rank / Status:    #${integrationMeta.rank} (${integrationMeta.supportStatus})\n`;
+    card += `  Connection Mode:  ${integrationMeta.connectionMode}\n`;
+    card += `  Data Flow:        ${integrationMeta.dataFlowSummary}\n`;
+    card += `  Rate Limits:      ${integrationMeta.rateLimitsSummary}\n`;
+    if (integrationMeta.requiredScopes.length > 0) {
+      card += `  Required Scopes:  ${integrationMeta.requiredScopes.join(", ")}\n`;
+    }
+    if (integrationMeta.sideEffects.length > 0) {
+      card += `  Side Effects:     ${integrationMeta.sideEffects.join("; ")}\n`;
+    }
+    if (integrationMeta.limitations.length > 0) {
+      card += `  Limitations:      ${integrationMeta.limitations.join("; ")}\n`;
     }
   }
 
@@ -224,6 +318,16 @@ export function handleProviderSetupGuide(
   guide += `${dim}──────────────────────────────────────────────────${reset}\n`;
 
   switch (providerType) {
+    case "anthropic":
+      guide += `1. Create an Anthropic API Key in Anthropic Console (https://console.anthropic.com/settings/keys).\n`;
+      guide += `2. Export the environment variable in your terminal session:\n`;
+      guide += `   ${cyan}export ANTHROPIC_API_KEY="sk-ant-your-key-here"${reset}\n`;
+      guide += `   ${dim}Or add to your local '.env' file: ANTHROPIC_API_KEY=sk-ant-...\n`;
+      guide += `3. Default frontier model: ${cyan}claude-3-5-sonnet-20241022${reset} (advanced tier, 200k context).\n`;
+      guide += `4. Verify setup and reachability:\n`;
+      guide += `   ${yellow}terrarium provider test anthropic${reset}\n`;
+      break;
+
     case "openai":
       guide += `1. Generate an API key in OpenAI Dashboard (https://platform.openai.com/api-keys).\n`;
       guide += `2. Export the environment variable in your terminal session:\n`;
@@ -235,9 +339,29 @@ export function handleProviderSetupGuide(
 
     case "ollama":
       guide += `1. Install Ollama locally (https://ollama.com).\n`;
-      guide += `2. Start Ollama and pull desired model:\n`;
-      guide += `   ${cyan}ollama run llama3.2${reset}\n`;
-      guide += `3. Ollama runs on http://localhost:11434 with zero credential requirements.\n`;
+      guide += `2. Start Ollama daemon and pull recommended coding models:\n`;
+      guide += `   ${cyan}ollama serve${reset}\n`;
+      guide += `   ${cyan}ollama pull llama3.2${reset}  ${dim}(general lightweight reasoning)${reset}\n`;
+      guide += `   ${cyan}ollama pull qwen2.5-coder${reset}  ${dim}(specialized code synthesis)${reset}\n`;
+      guide += `3. 100% private offline loopback (http://localhost:11434). Zero cost, no API keys required.\n`;
+      guide += `4. Verify reachability:\n`;
+      guide += `   ${yellow}terrarium provider test ollama${reset}\n`;
+      break;
+
+    case "gemini":
+      guide += `1. Create an API key in Google AI Studio (https://aistudio.google.com/app/apikey).\n`;
+      guide += `2. Export the environment variable in your terminal session:\n`;
+      guide += `   ${cyan}export GEMINI_API_KEY="AIzaSy-your-key-here"${reset}\n`;
+      guide += `   ${dim}Or set GOOGLE_API_KEY in your local '.env' file.${reset}\n`;
+      guide += `3. Supports 2M token context window (${cyan}gemini-1.5-pro${reset}) for massive repo ingestion.\n`;
+      guide += `4. Verify setup:\n`;
+      guide += `   ${yellow}terrarium provider test gemini${reset}\n`;
+      break;
+
+    case "custom":
+      guide += `1. Configure custom OpenAI-compatible endpoint in .env:\n`;
+      guide += `   ${cyan}CUSTOM_PROVIDER_BASE_URL="http://localhost:8000/v1"${reset}\n`;
+      guide += `   ${cyan}CUSTOM_PROVIDER_API_KEY="optional-bearer-token"${reset}\n`;
       break;
 
     default:

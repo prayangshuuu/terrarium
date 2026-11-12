@@ -13,6 +13,8 @@ import {
   type ProviderType,
 } from "@terrarium/contracts";
 
+export type FetchFunction = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
 export interface ProviderAdapterConfig {
   readonly provider: ProviderType;
   readonly apiKey?: string;
@@ -43,6 +45,130 @@ export const KNOWN_OPENAI_PRICING: Readonly<Record<string, ModelPricing>> = {
   "gpt-4-turbo": { inputPer1M: 10.0, outputPer1M: 30.0 },
   "gpt-3.5-turbo": { inputPer1M: 0.5, outputPer1M: 1.5 },
 };
+
+export const KNOWN_ANTHROPIC_PRICING: Readonly<Record<string, ModelPricing>> = {
+  "claude-3-5-sonnet-20241022": { inputPer1M: 3.0, outputPer1M: 15.0 },
+  "claude-3-5-sonnet-latest": { inputPer1M: 3.0, outputPer1M: 15.0 },
+  "claude-3-5-haiku-20241022": { inputPer1M: 0.8, outputPer1M: 4.0 },
+  "claude-3-5-haiku-latest": { inputPer1M: 0.8, outputPer1M: 4.0 },
+  "claude-3-opus-20240229": { inputPer1M: 15.0, outputPer1M: 75.0 },
+  "claude-3-opus-latest": { inputPer1M: 15.0, outputPer1M: 75.0 },
+};
+
+export const KNOWN_GEMINI_PRICING: Readonly<Record<string, ModelPricing>> = {
+  "gemini-1.5-pro": { inputPer1M: 1.25, outputPer1M: 5.0 },
+  "gemini-1.5-pro-latest": { inputPer1M: 1.25, outputPer1M: 5.0 },
+  "gemini-1.5-flash": { inputPer1M: 0.075, outputPer1M: 0.3 },
+  "gemini-1.5-flash-latest": { inputPer1M: 0.075, outputPer1M: 0.3 },
+  "gemini-2.0-flash": { inputPer1M: 0.1, outputPer1M: 0.4 },
+};
+
+export const KNOWN_OLLAMA_PRICING: Readonly<Record<string, ModelPricing>> = {
+  "llama3.2": { inputPer1M: 0.0, outputPer1M: 0.0 },
+  "llama3.2:latest": { inputPer1M: 0.0, outputPer1M: 0.0 },
+  "qwen2.5-coder": { inputPer1M: 0.0, outputPer1M: 0.0 },
+  "deepseek-r1": { inputPer1M: 0.0, outputPer1M: 0.0 },
+  "codellama": { inputPer1M: 0.0, outputPer1M: 0.0 },
+};
+
+export const DEFAULT_ANTHROPIC_MODELS: readonly ModelInfo[] = [
+  {
+    id: "claude-3-5-sonnet-20241022",
+    displayName: "Claude 3.5 Sonnet (State of the Art Intelligence)",
+    tier: "advanced",
+    contextWindow: 200000,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPerInputToken: 0.000003,
+    costPerOutputToken: 0.000015,
+  },
+  {
+    id: "claude-3-5-haiku-20241022",
+    displayName: "Claude 3.5 Haiku (Lightning Fast & Economical)",
+    tier: "standard",
+    contextWindow: 200000,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPerInputToken: 0.0000008,
+    costPerOutputToken: 0.000004,
+  },
+  {
+    id: "claude-3-opus-20240229",
+    displayName: "Claude 3 Opus (Deep Reasoning & Analysis)",
+    tier: "advanced",
+    contextWindow: 200000,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPerInputToken: 0.000015,
+    costPerOutputToken: 0.000075,
+  },
+];
+
+export const DEFAULT_OLLAMA_MODELS: readonly ModelInfo[] = [
+  {
+    id: "llama3.2",
+    displayName: "Llama 3.2 (Local 3B/1B Lightweight)",
+    tier: "standard",
+    contextWindow: 128000,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPerInputToken: 0.0,
+    costPerOutputToken: 0.0,
+  },
+  {
+    id: "qwen2.5-coder",
+    displayName: "Qwen 2.5 Coder (Local Code Specialist)",
+    tier: "advanced",
+    contextWindow: 32768,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPerInputToken: 0.0,
+    costPerOutputToken: 0.0,
+  },
+  {
+    id: "deepseek-r1",
+    displayName: "DeepSeek R1 (Local Distilled Reasoning)",
+    tier: "advanced",
+    contextWindow: 65536,
+    supportsTools: false,
+    supportsStreaming: true,
+    costPerInputToken: 0.0,
+    costPerOutputToken: 0.0,
+  },
+  {
+    id: "codellama",
+    displayName: "CodeLlama (Local Code Synthesis)",
+    tier: "standard",
+    contextWindow: 16384,
+    supportsTools: false,
+    supportsStreaming: true,
+    costPerInputToken: 0.0,
+    costPerOutputToken: 0.0,
+  },
+];
+
+export const DEFAULT_GEMINI_MODELS: readonly ModelInfo[] = [
+  {
+    id: "gemini-1.5-pro",
+    displayName: "Gemini 1.5 Pro (2M Long-Context Reasoning)",
+    tier: "advanced",
+    contextWindow: 2000000,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPerInputToken: 0.00000125,
+    costPerOutputToken: 0.000005,
+  },
+  {
+    id: "gemini-1.5-flash",
+    displayName: "Gemini 1.5 Flash (High-Throughput Omnimodal)",
+    tier: "standard",
+    contextWindow: 1000000,
+    supportsTools: true,
+    supportsStreaming: true,
+    costPerInputToken: 0.000000075,
+    costPerOutputToken: 0.0000003,
+  },
+];
 
 export const DEFAULT_OPENAI_MODELS: readonly ModelInfo[] = [
   {
@@ -95,7 +221,12 @@ export function calculateEstimatedCostUsd(
   promptTokens: number,
   completionTokens: number
 ): number {
-  const pricing = KNOWN_OPENAI_PRICING[model] ?? { inputPer1M: 1.0, outputPer1M: 3.0 };
+  const pricing =
+    KNOWN_ANTHROPIC_PRICING[model] ??
+    KNOWN_OPENAI_PRICING[model] ??
+    KNOWN_GEMINI_PRICING[model] ??
+    KNOWN_OLLAMA_PRICING[model] ??
+    { inputPer1M: 1.0, outputPer1M: 3.0 };
   const inputCost = (promptTokens / 1_000_000) * pricing.inputPer1M;
   const outputCost = (completionTokens / 1_000_000) * pricing.outputPer1M;
   return Math.round((inputCost + outputCost) * 1_000_000) / 1_000_000;

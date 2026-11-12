@@ -13,6 +13,10 @@ import {
 import type { TerrariumConfig } from "@terrarium/config";
 import { MockModelAdapter } from "./mock-adapter.ts";
 import { OpenAIProviderAdapter } from "./openai-adapter.ts";
+import { AnthropicProviderAdapter } from "./anthropic-adapter.ts";
+import { OllamaProviderAdapter } from "./ollama-adapter.ts";
+import { GeminiProviderAdapter } from "./gemini-adapter.ts";
+import { ClaudeCodeCliAdapter } from "./claude-code-cli-adapter.ts";
 
 export interface ProviderRegistry {
   registerAdapter(adapter: ModelProviderAdapter): void;
@@ -74,9 +78,34 @@ export function createProviderRegistry(
   if (options.defaultMock) {
     registry.registerAdapter(new MockModelAdapter("custom", {}, "Default Mock Model Adapter"));
     registry.registerAdapter(new MockModelAdapter("openai", {}, "Mock OpenAI Adapter"));
+    registry.registerAdapter(new MockModelAdapter("anthropic", {}, "Mock Anthropic Adapter"));
+    registry.registerAdapter(new MockModelAdapter("ollama", {}, "Mock Ollama Adapter"));
+    registry.registerAdapter(new MockModelAdapter("gemini", {}, "Mock Gemini Adapter"));
+    registry.registerCliAdapter(new ClaudeCodeCliAdapter());
     return registry;
   }
 
+  // 1. Anthropic Provider Adapter (Rank 1)
+  const anthropicCfg = options.config?.getProviderConfig("anthropic");
+  registry.registerAdapter(
+    new AnthropicProviderAdapter({
+      provider: "anthropic",
+      apiKey: anthropicCfg?.apiKey,
+      baseUrl: anthropicCfg?.baseUrl,
+      allowExternalCalls: false, // Explicit opt-in required
+    })
+  );
+
+  // 2. Ollama Local Offline Provider Adapter (Rank 2)
+  const ollamaCfg = options.config?.getProviderConfig("ollama");
+  registry.registerAdapter(
+    new OllamaProviderAdapter({
+      provider: "ollama",
+      baseUrl: ollamaCfg?.baseUrl ?? "http://localhost:11434",
+    })
+  );
+
+  // 3. OpenAI Provider Adapter (Rank 3)
   const openaiCfg = options.config?.getProviderConfig("openai");
   registry.registerAdapter(
     new OpenAIProviderAdapter({
@@ -84,9 +113,23 @@ export function createProviderRegistry(
       apiKey: openaiCfg?.apiKey,
       baseUrl: openaiCfg?.baseUrl,
       organizationId: openaiCfg?.organizationId,
-      allowExternalCalls: false, // Protected by default
+      allowExternalCalls: false, // Explicit opt-in required
     })
   );
+
+  // 4. Google Gemini Provider Adapter (Rank 4)
+  const geminiCfg = options.config?.getProviderConfig("gemini");
+  registry.registerAdapter(
+    new GeminiProviderAdapter({
+      provider: "gemini",
+      apiKey: geminiCfg?.apiKey,
+      baseUrl: geminiCfg?.baseUrl,
+      allowExternalCalls: false, // Explicit opt-in required
+    })
+  );
+
+  // 5. Claude Code CLI Adapter (Rank 5)
+  registry.registerCliAdapter(new ClaudeCodeCliAdapter());
 
   // Always register mock adapter for fallback or test execution
   registry.registerAdapter(new MockModelAdapter("custom", {}, "Default Mock Adapter"));

@@ -104,3 +104,64 @@ export function sanitizeRequestForAudit(
     timestamp: new Date().toISOString(),
   };
 }
+
+export interface RateLimitInfo {
+  readonly requestsRemaining?: number;
+  readonly requestsLimit?: number;
+  readonly tokensRemaining?: number;
+  readonly tokensLimit?: number;
+  readonly retryAfterSeconds?: number;
+  readonly resetTime?: string;
+}
+
+/**
+ * Extracts normalized rate limit information from provider HTTP response headers.
+ * Supports OpenAI, Anthropic, and generic standard rate limit header conventions.
+ */
+export function parseRateLimitHeaders(
+  headers: Headers | Record<string, string>
+): RateLimitInfo {
+  const getHeader = (name: string): string | undefined => {
+    if (typeof (headers as Headers).get === "function") {
+      return (headers as Headers).get(name) ?? undefined;
+    }
+    const rec = headers as Record<string, string>;
+    const lower = name.toLowerCase();
+    for (const [k, v] of Object.entries(rec)) {
+      if (k.toLowerCase() === lower) return v;
+    }
+    return undefined;
+  };
+
+  const parseNum = (val: string | undefined): number | undefined => {
+    if (!val) return undefined;
+    const parsed = parseInt(val, 10);
+    return isNaN(parsed) ? undefined : parsed;
+  };
+
+  // Anthropic rate limit headers
+  const anthropicReqRem = parseNum(getHeader("anthropic-ratelimit-requests-remaining"));
+  const anthropicReqLim = parseNum(getHeader("anthropic-ratelimit-requests-limit"));
+  const anthropicTokRem = parseNum(getHeader("anthropic-ratelimit-tokens-remaining"));
+  const anthropicTokLim = parseNum(getHeader("anthropic-ratelimit-tokens-limit"));
+  const anthropicReset = getHeader("anthropic-ratelimit-requests-reset");
+
+  // OpenAI rate limit headers
+  const openAiReqRem = parseNum(getHeader("x-ratelimit-remaining-requests"));
+  const openAiReqLim = parseNum(getHeader("x-ratelimit-limit-requests"));
+  const openAiTokRem = parseNum(getHeader("x-ratelimit-remaining-tokens"));
+  const openAiTokLim = parseNum(getHeader("x-ratelimit-limit-tokens"));
+  const openAiReset = getHeader("x-ratelimit-reset-requests");
+
+  // Generic Retry-After
+  const retryAfter = parseNum(getHeader("retry-after"));
+
+  return {
+    requestsRemaining: anthropicReqRem ?? openAiReqRem,
+    requestsLimit: anthropicReqLim ?? openAiReqLim,
+    tokensRemaining: anthropicTokRem ?? openAiTokRem,
+    tokensLimit: anthropicTokLim ?? openAiTokLim,
+    retryAfterSeconds: retryAfter,
+    resetTime: anthropicReset ?? openAiReset,
+  };
+}

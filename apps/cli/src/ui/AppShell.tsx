@@ -26,6 +26,7 @@ import { TasksView } from "./views/TasksView.js";
 import { ConversationsView } from "./views/ConversationsView.js";
 import { StudioView } from "./views/StudioView.js";
 import { ReportsView } from "./views/ReportsView.js";
+import { SettingsView } from "./views/SettingsView.js";
 import { PlaceholderView } from "./views/PlaceholderView.js";
 
 export interface AppShellProps {
@@ -236,6 +237,8 @@ export function AppShell({
                 <StudioView />
               ) : state.activeWorkspace === "reports" ? (
                 <ReportsView />
+              ) : state.activeWorkspace === "settings" ? (
+                <SettingsView />
               ) : (
                 <PlaceholderView workspaceId={state.activeWorkspace} />
               )}

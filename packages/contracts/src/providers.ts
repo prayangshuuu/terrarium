@@ -458,3 +458,274 @@ export function validateModelResponse(
     rawResponse: value.rawResponse,
   });
 }
+
+/**
+ * Specialist integration ranking, scopes, and risk classification contracts.
+ * Aligns with PLAN.md Section 10.4, Section 12, and PROMPT 19 requirements (A1 - Boundaries).
+ */
+export const INTEGRATION_VALUE_LEVELS = ["critical", "high", "medium", "low"] as const;
+export type SpecialistIntegrationValue = (typeof INTEGRATION_VALUE_LEVELS)[number];
+
+export const INTEGRATION_RISK_LEVELS = ["low", "medium", "high"] as const;
+export type SpecialistIntegrationRisk = (typeof INTEGRATION_RISK_LEVELS)[number];
+
+export const INTEGRATION_MAINTENANCE_LEVELS = ["low", "medium", "high"] as const;
+export type SpecialistIntegrationMaintenance = (typeof INTEGRATION_MAINTENANCE_LEVELS)[number];
+
+export const INTEGRATION_SUPPORT_LEVELS = ["tier1_official", "tier2_experimental", "community"] as const;
+export type SpecialistIntegrationSupport = (typeof INTEGRATION_SUPPORT_LEVELS)[number];
+
+export const INTEGRATION_CONNECTION_MODES = ["explicit_key", "local_daemon", "cli_subprocess"] as const;
+export type SpecialistConnectionMode = (typeof INTEGRATION_CONNECTION_MODES)[number];
+
+export interface SpecialistIntegration {
+  readonly id: string;
+  readonly name: string;
+  readonly rank: number;
+  readonly kind: ProviderIntegrationKind;
+  readonly providerType: ProviderType;
+  readonly userValue: SpecialistIntegrationValue;
+  readonly risk: SpecialistIntegrationRisk;
+  readonly maintenance: SpecialistIntegrationMaintenance;
+  readonly supportStatus: SpecialistIntegrationSupport;
+  readonly description: string;
+  readonly connectionMode: SpecialistConnectionMode;
+  readonly requiredScopes: readonly string[];
+  readonly dataFlowSummary: string;
+  readonly rateLimitsSummary: string;
+  readonly sideEffects: readonly string[];
+  readonly limitations: readonly string[];
+  readonly isAvailable: boolean;
+  readonly isEnabled: boolean;
+  readonly isConnected: boolean;
+  readonly diagnosticMessage?: string;
+}
+
+/**
+ * Canonical evaluated rankings of specialist integrations by user value, risk, maintenance, and support.
+ * Satisfies PROMPT 19: "Rank integrations by user value, risk, maintenance, and support."
+ */
+export const INTEGRATION_RANKINGS: readonly SpecialistIntegration[] = [
+  {
+    id: "anthropic",
+    name: "Anthropic Claude Models",
+    rank: 1,
+    kind: "model_api",
+    providerType: "anthropic",
+    userValue: "critical",
+    risk: "low",
+    maintenance: "low",
+    supportStatus: "tier1_official",
+    description: "Default high-reasoning intelligence for architecture review, code analysis, and planning.",
+    connectionMode: "explicit_key",
+    requiredScopes: ["messages:write", "models:read"],
+    dataFlowSummary: "Encrypted HTTPS REST to api.anthropic.com; zero customer data retention under commercial API terms.",
+    rateLimitsSummary: "Automatic header backoff against standard Anthropic tier rate limits (RPM / TPM).",
+    sideEffects: ["Incurs API token costs per model pricing tier (Sonnet, Haiku, Opus)"],
+    limitations: [
+      "Requires active external network access",
+      "Requires explicit ANTHROPIC_API_KEY credential configuration",
+      "Subject to provider cloud availability and upstream rate limits",
+    ],
+    isAvailable: true,
+    isEnabled: true,
+    isConnected: false,
+  },
+  {
+    id: "ollama",
+    name: "Ollama Local Offline Models",
+    rank: 2,
+    kind: "model_api",
+    providerType: "ollama",
+    userValue: "high",
+    risk: "low",
+    maintenance: "low",
+    supportStatus: "tier1_official",
+    description: "100% private, zero-cost offline local inference (Llama 3.2, Qwen2.5-Coder, DeepSeek).",
+    connectionMode: "local_daemon",
+    requiredScopes: ["local:inference", "models:read"],
+    dataFlowSummary: "100% local loopback communication (http://localhost:11434); zero external data egress.",
+    rateLimitsSummary: "Unthrottled by API keys; concurrency bounded by local CPU/GPU and system memory queue.",
+    sideEffects: ["Utilizes local host CPU, RAM, and GPU/VRAM hardware resources"],
+    limitations: [
+      "Context window and generation latency constrained by local host hardware specs",
+      "Requires local Ollama daemon to be running ('ollama serve')",
+      "Smaller local models exhibit lower reasoning accuracy than large frontier cloud models",
+    ],
+    isAvailable: true,
+    isEnabled: true,
+    isConnected: false,
+  },
+  {
+    id: "openai",
+    name: "OpenAI & Compatible Models",
+    rank: 3,
+    kind: "model_api",
+    providerType: "openai",
+    userValue: "high",
+    risk: "low",
+    maintenance: "low",
+    supportStatus: "tier1_official",
+    description: "Omnimodal and specialized reasoning models (GPT-4o, o1-mini, GPT-4o-mini).",
+    connectionMode: "explicit_key",
+    requiredScopes: ["chat:write", "models:read"],
+    dataFlowSummary: "Encrypted HTTPS REST to api.openai.com/v1; compliant with zero-retention enterprise terms.",
+    rateLimitsSummary: "Dynamic token-bucket tracking against organization TPM / RPM headers.",
+    sideEffects: ["Incurs API token usage costs per model pricing tier"],
+    limitations: [
+      "Requires active external network access",
+      "Requires explicit OPENAI_API_KEY credential configuration",
+      "Reasoning models (o1) do not support function tool calling or custom temperature",
+    ],
+    isAvailable: true,
+    isEnabled: true,
+    isConnected: false,
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini Models",
+    rank: 4,
+    kind: "model_api",
+    providerType: "gemini",
+    userValue: "high",
+    risk: "medium",
+    maintenance: "medium",
+    supportStatus: "tier2_experimental",
+    description: "Massive context-window multimodal reasoning (Gemini 1.5 Pro with 2M tokens, Gemini 1.5 Flash).",
+    connectionMode: "explicit_key",
+    requiredScopes: ["content:generate", "models:read"],
+    dataFlowSummary: "Encrypted HTTPS REST to generativelanguage.googleapis.com; Google AI Studio terms apply.",
+    rateLimitsSummary: "Per-minute request limits based on Google Cloud project quota tier.",
+    sideEffects: ["Incurs Google Cloud token usage fees or quota consumption"],
+    limitations: [
+      "Requires active external network access",
+      "Requires explicit GEMINI_API_KEY or GOOGLE_API_KEY configuration",
+      "Different tool calling JSON schema convention from OpenAI standard",
+    ],
+    isAvailable: true,
+    isEnabled: false,
+    isConnected: false,
+  },
+  {
+    id: "claude-code-cli",
+    name: "Claude Code CLI Subprocess Adapter",
+    rank: 5,
+    kind: "coding_agent_cli",
+    providerType: "anthropic",
+    userValue: "medium",
+    risk: "high",
+    maintenance: "medium",
+    supportStatus: "tier2_experimental",
+    description: "Subprocess coding-agent workflow runner executing inside sandboxed workspace directory.",
+    connectionMode: "cli_subprocess",
+    requiredScopes: ["subproc:sandbox_exec", "fs:workspace_write"],
+    dataFlowSummary: "Spawns local CLI subprocess with working directory strictly bound to workspace root.",
+    rateLimitsSummary: "Bounded by execution timeout (default 120s) and concurrency pool limit of 1.",
+    sideEffects: [
+      "Spawns local operating system child processes",
+      "May modify workspace files within designated sandbox boundaries",
+    ],
+    limitations: [
+      "Requires external CLI binary ('claude') installed and present in system PATH",
+      "Higher risk profile: requires human approval gate for consequential file alterations",
+      "Non-interactive mode only; interactive PTY terminals are disabled in automated orchestration",
+    ],
+    isAvailable: true,
+    isEnabled: false,
+    isConnected: false,
+  },
+];
+
+export function validateSpecialistIntegration(
+  value: unknown,
+  path = "integration"
+): Result<SpecialistIntegration, DomainValidationError> {
+  if (!isRecord(value)) {
+    return fail(
+      new DomainValidationError(`Expected object for ${path}`, [
+        { path, message: "Expected object", received: value },
+      ])
+    );
+  }
+
+  const collector = new ValidationCollector();
+  const id = collector.check(validateString(value.id, `${path}.id`, { minLength: 1 }));
+  const name = collector.check(validateString(value.name, `${path}.name`, { minLength: 1 }));
+  const rank = collector.check(validateNumber(value.rank, `${path}.rank`, { min: 1, integer: true }));
+  const kind = collector.check(
+    validateEnum(value.kind, `${path}.kind`, PROVIDER_INTEGRATION_KINDS)
+  );
+  const providerType = collector.check(
+    validateEnum(value.providerType, `${path}.providerType`, PROVIDER_TYPES)
+  );
+  const userValue = collector.check(
+    validateEnum(value.userValue, `${path}.userValue`, INTEGRATION_VALUE_LEVELS)
+  );
+  const risk = collector.check(
+    validateEnum(value.risk, `${path}.risk`, INTEGRATION_RISK_LEVELS)
+  );
+  const maintenance = collector.check(
+    validateEnum(value.maintenance, `${path}.maintenance`, INTEGRATION_MAINTENANCE_LEVELS)
+  );
+  const supportStatus = collector.check(
+    validateEnum(value.supportStatus, `${path}.supportStatus`, INTEGRATION_SUPPORT_LEVELS)
+  );
+  const description = collector.check(
+    validateString(value.description, `${path}.description`, { minLength: 1 })
+  );
+  const connectionMode = collector.check(
+    validateEnum(value.connectionMode, `${path}.connectionMode`, INTEGRATION_CONNECTION_MODES)
+  );
+  const isAvailable = collector.check(validateBoolean(value.isAvailable, `${path}.isAvailable`));
+  const isEnabled = collector.check(validateBoolean(value.isEnabled, `${path}.isEnabled`));
+  const isConnected = collector.check(validateBoolean(value.isConnected, `${path}.isConnected`));
+
+  if (
+    collector.hasIssues() ||
+    id === undefined ||
+    name === undefined ||
+    rank === undefined ||
+    kind === undefined ||
+    providerType === undefined ||
+    userValue === undefined ||
+    risk === undefined ||
+    maintenance === undefined ||
+    supportStatus === undefined ||
+    description === undefined ||
+    connectionMode === undefined ||
+    isAvailable === undefined ||
+    isEnabled === undefined ||
+    isConnected === undefined
+  ) {
+    return fail(collector.toError("SpecialistIntegration validation failed"));
+  }
+
+  return ok({
+    id,
+    name,
+    rank,
+    kind,
+    providerType,
+    userValue,
+    risk,
+    maintenance,
+    supportStatus,
+    description,
+    connectionMode,
+    requiredScopes: Array.isArray(value.requiredScopes)
+      ? (value.requiredScopes.filter((s) => typeof s === "string") as string[])
+      : [],
+    dataFlowSummary: typeof value.dataFlowSummary === "string" ? value.dataFlowSummary : "",
+    rateLimitsSummary: typeof value.rateLimitsSummary === "string" ? value.rateLimitsSummary : "",
+    sideEffects: Array.isArray(value.sideEffects)
+      ? (value.sideEffects.filter((s) => typeof s === "string") as string[])
+      : [],
+    limitations: Array.isArray(value.limitations)
+      ? (value.limitations.filter((s) => typeof s === "string") as string[])
+      : [],
+    isAvailable,
+    isEnabled,
+    isConnected,
+    diagnosticMessage: typeof value.diagnosticMessage === "string" ? value.diagnosticMessage : undefined,
+  });
+}

@@ -32,11 +32,12 @@ import {
   calculateEstimatedCostUsd,
   DEFAULT_OPENAI_MODELS,
   KNOWN_OPENAI_PRICING,
+  type FetchFunction,
   type ProviderAdapterConfig,
 } from "./types.ts";
 import { assertExternalCallAuthorized, sanitizeHeaders } from "./security.ts";
 
-export type FetchFunction = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+export type { FetchFunction };
 
 export interface OpenAIAdapterOptions extends ProviderAdapterConfig {
   readonly fetchFn?: FetchFunction;
