@@ -30,6 +30,7 @@ import { ContextAssembler } from "./context/index.ts";
 import { BudgetManager } from "./budget/index.ts";
 import { ModelRouter } from "./routing/index.ts";
 import { TelemetryManager } from "./observability/index.ts";
+import { createEngineeringStudioService, EngineeringStudioService } from "./studio/index.ts";
 
 export const CORE_PACKAGE_NAME = "@terrarium/core" as const;
 export const CORE_VERSION = "0.1.0" as const;
@@ -46,6 +47,7 @@ export * from "./context/index.ts";
 export * from "./budget/index.ts";
 export * from "./routing/index.ts";
 export * from "./observability/index.ts";
+export * from "./studio/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;
@@ -67,6 +69,7 @@ export interface CoreEngine {
   readonly budget: BudgetManager;
   readonly router: ModelRouter;
   readonly telemetry: TelemetryManager;
+  readonly studio: EngineeringStudioService;
   getState(): CoreEngineState;
   getPackageInfo(): TerrariumPackageInfo;
   shutdown(): Promise<Result<void, string>>;
@@ -84,6 +87,7 @@ export interface CreateCoreEngineOptions {
   readonly budget?: BudgetManager;
   readonly router?: ModelRouter;
   readonly telemetry?: TelemetryManager;
+  readonly studio?: EngineeringStudioService;
 }
 
 /**
@@ -159,6 +163,14 @@ export function createCoreEngine(
         logRepository: db?.logs,
       });
 
+  const studio = !isDirectConfig && (optionsOrConfig as CreateCoreEngineOptions).studio
+    ? (optionsOrConfig as CreateCoreEngineOptions).studio!
+    : createEngineeringStudioService({
+        workspaceRoot: process.cwd(),
+        approvalManager: approvals,
+        repositories: db,
+      });
+
   return {
     config,
     db,
@@ -173,6 +185,7 @@ export function createCoreEngine(
     budget,
     router,
     telemetry,
+    studio,
     getState(): CoreEngineState {
       return {
         status,

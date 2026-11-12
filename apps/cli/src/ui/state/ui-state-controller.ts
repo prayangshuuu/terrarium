@@ -44,6 +44,11 @@ import {
   type ActivityFeedState,
   resolveAgentLifecycleStatus,
   type TerminalColorName,
+  type CodeAnalysisSummary,
+  type CodeFilePatch,
+  type BoundedTestRunResult,
+  type PatchApplicationResult,
+  type PatchRollbackResult,
 } from "@terrarium/contracts";
 import type { CoreEngine } from "@terrarium/core";
 import {
@@ -70,6 +75,9 @@ export interface UiStateControllerOptions {
   readonly initialSessions?: readonly Session[];
   readonly initialMessages?: readonly ConversationMessageUI[];
   readonly initialActivityFeed?: readonly ActivityFeedEventUI[];
+  readonly initialPatches?: readonly CodeFilePatch[];
+  readonly initialStudioAnalysis?: CodeAnalysisSummary | null;
+  readonly initialStudioTestRun?: BoundedTestRunResult | null;
 }
 
 export class UiStateController {
@@ -116,6 +124,7 @@ export class UiStateController {
     const initialSessions = options.initialSessions ?? [];
     const initialMessages = options.initialMessages ?? [];
     const initialActivity = options.initialActivityFeed ?? [];
+    const initialPatches = options.initialPatches ?? [];
 
     this.state = {
       activeWorkspace: initialWorkspace,
@@ -177,6 +186,17 @@ export class UiStateController {
         ...createDefaultActivityFeedState(),
         items: initialActivity,
       },
+
+      // Prompt 17: Engineering Studio State
+      studioPatches: initialPatches,
+      selectedStudioPatchIndex: 0,
+      selectedStudioPatchId: initialPatches[0]?.id ?? null,
+      studioAnalysis: options.initialStudioAnalysis ?? null,
+      latestStudioTestRun: options.initialStudioTestRun ?? null,
+      isAnalyzingStudio: false,
+      isApplyingStudioPatch: false,
+      isRunningStudioTests: false,
+      studioActiveTab: "analysis",
     };
 
     // If initial task exists, initialize its detail
@@ -191,6 +211,7 @@ export class UiStateController {
       void this.loadTasks();
       void this.loadSessions();
       void this.reconnectActivityFeed();
+      void this.loadStudioData();
     }
   }
 
@@ -1529,6 +1550,22 @@ export class UiStateController {
         action: () => this.openHelp(),
       },
       {
+        id: "studio-scan",
+        title: "Analyze Repository",
+        subtitle: "Scan project tree, detect languages, entry points, and protected files",
+        shortcut: "[s]",
+        category: "action",
+        action: () => void this.analyzeRepository(),
+      },
+      {
+        id: "studio-test",
+        title: "Run Bounded Tests",
+        subtitle: "Execute workspace tests within execution boundary",
+        shortcut: "[t]",
+        category: "action",
+        action: () => void this.runStudioTests(),
+      },
+      {
         id: "system-clear-alert",
         title: "Dismiss Active Alert",
         subtitle: "Clear current notification message",
@@ -1548,6 +1585,269 @@ export class UiStateController {
         (item.subtitle && item.subtitle.toLowerCase().includes(q)) ||
         (item.shortcut && item.shortcut.toLowerCase().includes(q))
     );
+  }
+
+  // =========================================================================
+  // Prompt 17: Engineering Studio State & Operations (A1, A2, A4, A5)
+  // =========================================================================
+
+  /**
+   * Refreshes studio patches, analysis summary, and test results from core engine.
+   */
+  public async loadStudioData(): Promise<void> {
+    if (!this.engine?.studio) return;
+
+    try {
+      const patches = this.engine.studio.listPatches();
+      const analysis = this.engine.studio.getLatestAnalysis();
+      const testRun = this.engine.studio.getLatestTestRun();
+
+      const selectedId =
+        this.state.selectedStudioPatchId && patches.some((p) => p.id === this.state.selectedStudioPatchId)
+          ? this.state.selectedStudioPatchId
+          : patches[0]?.id ?? null;
+
+      const selectedIdx = patches.findIndex((p) => p.id === selectedId);
+
+      this.setState({
+        studioPatches: patches,
+        selectedStudioPatchId: selectedId,
+        selectedStudioPatchIndex: Math.max(0, selectedIdx),
+        studioAnalysis: analysis,
+        latestStudioTestRun: testRun,
+      });
+    } catch (err) {
+      console.warn("Failed to load studio data:", err);
+    }
+  }
+
+  /**
+   * Switches active tab in Engineering Studio view.
+   */
+  public setStudioActiveTab(tab: "analysis" | "patches" | "diff" | "tests" | "sandbox"): void {
+    this.setState({ studioActiveTab: tab });
+  }
+
+  /**
+   * Selects a studio patch by index or patchId.
+   */
+  public selectStudioPatch(indexOrId: number | string): void {
+    const patches = this.state.studioPatches;
+    if (patches.length === 0) return;
+
+    let targetIdx = 0;
+    let targetId: string | null = null;
+
+    if (typeof indexOrId === "number") {
+      targetIdx = Math.max(0, Math.min(indexOrId, patches.length - 1));
+      targetId = patches[targetIdx]?.id ?? null;
+    } else {
+      const foundIdx = patches.findIndex((p) => p.id === indexOrId);
+      if (foundIdx !== -1) {
+        targetIdx = foundIdx;
+        targetId = indexOrId;
+      }
+    }
+
+    this.setState({
+      selectedStudioPatchIndex: targetIdx,
+      selectedStudioPatchId: targetId,
+    });
+  }
+
+  /**
+   * Triggers repository static analysis scan.
+   */
+  public async analyzeRepository(): Promise<void> {
+    if (!this.engine?.studio) {
+      this.setAlert("No engine attached to analyze repository", "warning");
+      return;
+    }
+
+    this.setState({ isAnalyzingStudio: true });
+    try {
+      const analysis = await this.engine.studio.analyzeRepository();
+      this.setState({
+        studioAnalysis: analysis,
+        isAnalyzingStudio: false,
+      });
+      this.setAlert(
+        `Repository analysis complete: ${analysis.languages.length} languages, ${analysis.frameworks.length} frameworks`,
+        "success"
+      );
+    } catch (err: unknown) {
+      this.setState({ isAnalyzingStudio: false });
+      this.setAlert(`Repository analysis failed: ${String(err)}`, "error");
+    }
+  }
+
+  /**
+   * Proposes a new code patch with unified diff and creates an approval gate.
+   */
+  public async proposeStudioPatch(input: {
+    filePath: string;
+    proposedContent: string;
+    rationale: string;
+    taskId?: string;
+  }): Promise<void> {
+    if (!this.engine?.studio) return;
+
+    const res = await this.engine.studio.proposePatch(input);
+    if (res.success) {
+      await this.loadStudioData();
+      this.selectStudioPatch(res.data.id);
+      this.setStudioActiveTab("diff");
+      this.setAlert(`Patch proposed for '${input.filePath}'. Consequential approval gate created.`, "info");
+    } else {
+      this.setAlert(`Failed to propose patch: ${res.error.message}`, "error");
+    }
+  }
+
+  /**
+   * Approves and applies a patch to the working tree.
+   */
+  public async approveAndApplyStudioPatch(patchId: string): Promise<boolean> {
+    if (!this.engine?.studio) {
+      // In-memory fallback
+      const patches = this.state.studioPatches.map((p) =>
+        p.id === patchId
+          ? {
+              ...p,
+              status: "applied" as const,
+              appliedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          : p
+      );
+      this.setState({ studioPatches: patches });
+      this.setAlert(`Patch '${patchId}' approved and applied (in-memory mode).`, "success");
+      return true;
+    }
+
+    this.setState({ isApplyingStudioPatch: true });
+    try {
+      // 1. Approve
+      await this.engine.studio.approvePatch(patchId, "Approved via Engineering Studio UI");
+
+      // 2. Apply
+      const appRes = await this.engine.studio.applyPatch(patchId);
+      this.setState({ isApplyingStudioPatch: false });
+
+      if (appRes.success) {
+        await this.loadStudioData();
+        this.setAlert(`✓ Patch applied to '${appRes.filePath}'. ${appRes.rollbackGuidance}`, "success");
+        return true;
+      } else {
+        await this.loadStudioData();
+        this.setAlert(`✗ Failed to apply patch: ${appRes.error}`, "error");
+        return false;
+      }
+    } catch (err: unknown) {
+      this.setState({ isApplyingStudioPatch: false });
+      this.setAlert(`Error applying patch: ${String(err)}`, "error");
+      return false;
+    }
+  }
+
+  /**
+   * Rejects a proposed patch.
+   */
+  public async rejectStudioPatch(patchId: string, reason = "Rejected via Engineering Studio UI"): Promise<boolean> {
+    if (!this.engine?.studio) {
+      const patches = this.state.studioPatches.map((p) =>
+        p.id === patchId
+          ? {
+              ...p,
+              status: "rejected" as const,
+              updatedAt: new Date().toISOString(),
+            }
+          : p
+      );
+      this.setState({ studioPatches: patches });
+      this.setAlert(`Patch '${patchId}' rejected.`, "info");
+      return true;
+    }
+
+    try {
+      const res = await this.engine.studio.rejectPatch(patchId, reason);
+      await this.loadStudioData();
+      if (res.success) {
+        this.setAlert(`Patch '${patchId}' rejected.`, "info");
+        return true;
+      } else {
+        this.setAlert(`Failed to reject patch: ${res.error.message}`, "error");
+        return false;
+      }
+    } catch (err: unknown) {
+      this.setAlert(`Error rejecting patch: ${String(err)}`, "error");
+      return false;
+    }
+  }
+
+  /**
+   * Rolls back an applied patch.
+   */
+  public async rollbackStudioPatch(patchId: string): Promise<boolean> {
+    if (!this.engine?.studio) {
+      const patches = this.state.studioPatches.map((p) =>
+        p.id === patchId
+          ? {
+              ...p,
+              status: "rolled_back" as const,
+              rolledBackAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }
+          : p
+      );
+      this.setState({ studioPatches: patches });
+      this.setAlert(`Patch '${patchId}' rolled back (in-memory mode).`, "warning");
+      return true;
+    }
+
+    try {
+      const res = await this.engine.studio.rollbackPatch(patchId);
+      await this.loadStudioData();
+      if (res.success) {
+        this.setAlert(`✓ Patch '${patchId}' rolled back. Original file content restored.`, "warning");
+        return true;
+      } else {
+        this.setAlert(`✗ Failed to rollback patch: ${res.error}`, "error");
+        return false;
+      }
+    } catch (err: unknown) {
+      this.setAlert(`Error rolling back patch: ${String(err)}`, "error");
+      return false;
+    }
+  }
+
+  /**
+   * Executes bounded test run.
+   */
+  public async runStudioTests(command?: string, timeoutMs?: number): Promise<void> {
+    if (!this.engine?.studio) {
+      this.setAlert("No engine attached to run bounded tests", "warning");
+      return;
+    }
+
+    this.setState({ isRunningStudioTests: true });
+    try {
+      const result = await this.engine.studio.runBoundedTests(command, timeoutMs);
+      this.setState({
+        latestStudioTestRun: result,
+        isRunningStudioTests: false,
+      });
+
+      if (result.passed) {
+        this.setAlert(`✓ Tests passed: ${result.passedTests}/${result.totalTests} in ${result.durationMs}ms`, "success");
+      } else if (result.timedOut) {
+        this.setAlert(`⚠ Test run timed out after ${result.durationMs}ms`, "error");
+      } else {
+        this.setAlert(`✗ Tests failed (${result.failedTests} failed, exit code ${result.exitCode})`, "error");
+      }
+    } catch (err: unknown) {
+      this.setState({ isRunningStudioTests: false });
+      this.setAlert(`Failed to execute bounded tests: ${String(err)}`, "error");
+    }
   }
 
   private bindEngineEvents(): void {

@@ -35,6 +35,11 @@ import {
   type ConversationMessageUI,
   type ActivityFeedEventUI,
   type ActivityFeedState,
+  type CodeAnalysisSummary,
+  type CodeFilePatch,
+  type BoundedTestRunResult,
+  type PatchApplicationResult,
+  type PatchRollbackResult,
 } from "@terrarium/contracts";
 
 export {
@@ -67,6 +72,11 @@ export {
   type ConversationMessageUI,
   type ActivityFeedEventUI,
   type ActivityFeedState,
+  type CodeAnalysisSummary,
+  type CodeFilePatch,
+  type BoundedTestRunResult,
+  type PatchApplicationResult,
+  type PatchRollbackResult,
 };
 
 export type FocusedRegion = "nav" | "content" | "palette" | "help";
@@ -225,4 +235,15 @@ export interface UiState {
 
   // Prompt 16: Activity Feed & Missed-Event Replay
   readonly activityFeed: ActivityFeedState;
+
+  // Prompt 17: Engineering Studio (Workspace 6)
+  readonly studioPatches: readonly CodeFilePatch[];
+  readonly selectedStudioPatchIndex: number;
+  readonly selectedStudioPatchId: string | null;
+  readonly studioAnalysis: CodeAnalysisSummary | null;
+  readonly latestStudioTestRun: BoundedTestRunResult | null;
+  readonly isAnalyzingStudio: boolean;
+  readonly isApplyingStudioPatch: boolean;
+  readonly isRunningStudioTests: boolean;
+  readonly studioActiveTab: "analysis" | "patches" | "diff" | "tests" | "sandbox";
 }

@@ -89,7 +89,7 @@ describe("OpenTUI Application Shell & Navigation Suite (A4 & A5)", () => {
 
     frame = setup.captureCharFrame();
     expect(frame).toContain("Engineering Studio");
-    expect(frame).toContain("Prompt 17");
+    expect(frame).toContain("Safe Code Workflow");
 
     // Press '0' for Settings
     setup.mockInput.pressKey("0");

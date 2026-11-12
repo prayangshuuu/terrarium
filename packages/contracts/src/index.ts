@@ -35,6 +35,7 @@ export * from "./routing.ts";
 export * from "./telemetry.ts";
 export * from "./results.ts";
 export * from "./repositories.ts";
+export * from "./code.ts";
 
 // UI presentation and user-facing terminology
 export * from "./ui.ts";
