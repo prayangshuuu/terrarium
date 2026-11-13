@@ -63,6 +63,7 @@ export * from "./studio/index.ts";
 export * from "./reports/index.ts";
 export * from "./workflow/index.ts";
 export * from "./coding-agents/index.ts";
+export * from "./prompt/index.ts";
 
 export interface CoreEngineState {
   readonly status: ExecutionStatus;

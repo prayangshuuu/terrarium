@@ -1,0 +1,29 @@
+#!/usr/bin/env bun
+/**
+ * bin/terrarium
+ *
+ * Standalone executable entrypoint for TERRARIUM (Prompt 26).
+ * Resolves repository root reliably across symlinks and global PATH installs.
+ */
+
+import { realpathSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Canonicalize entrypoint path resolving any symlinks (e.g. from ~/.local/bin/terrarium)
+const scriptUrl = import.meta.url;
+const scriptPath = fileURLToPath(scriptUrl);
+const canonicalScript = realpathSync(scriptPath);
+const repoRoot = resolve(dirname(canonicalScript), "..");
+const cliModulePath = resolve(repoRoot, "apps/cli/src/index.tsx");
+
+try {
+  const cli = await import(cliModulePath);
+  if (typeof cli.runCli === "function") {
+    await cli.runCli(process.argv.slice(2));
+  }
+} catch (error) {
+  const msg = error instanceof Error ? error.stack ?? error.message : String(error);
+  console.error(`[FAIL] Terrarium fatal error: ${msg}`);
+  process.exit(1);
+}

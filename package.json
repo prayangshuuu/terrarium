@@ -2,12 +2,16 @@
   "name": "terrarium",
   "version": "0.1.0",
   "private": true,
+  "bin": {
+    "terrarium": "./bin/terrarium"
+  },
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
     "terrarium": "bun run apps/cli/src/index.tsx",
+    "link:global": "mkdir -p ~/.local/bin && ln -sf $(pwd)/bin/terrarium ~/.local/bin/terrarium",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun test",
     "cli": "bun run --cwd apps/cli start",

@@ -22,6 +22,8 @@ import { handleCursorAgentCommand, printCursorAgentHelp } from "./cursor-agent-c
 import { handleOllamaCommand, printOllamaHelp } from "./ollama-cli.ts";
 import { handleAgentList, handleAgentSearch, handleAgentInspect, handleDepartmentList } from "./agent-commands.ts";
 import { handleCodingAgentList, handleCodingAgentMatrix } from "./coding-agent-commands.ts";
+import { handleDoctorCommand } from "./doctor-cli.ts";
+import { handleOneshotCommand } from "./oneshot-cli.ts";
 import { createCoreEngine } from "@terrarium/core";
 import { getDefaultConfig } from "@terrarium/config";
 
@@ -33,54 +35,40 @@ export function printMainCliHelp(): void {
 TERRARIUM — On-Demand Multi-Agent AI Orchestration Platform
 ================================================================================
 Usage:
-  bun run terrarium                                Launch interactive OpenTUI terminal shell
-  bun run terrarium -- <command> [options]         Execute CLI subcommands or agent tools
-  bun run terrarium --ollama <model>               Run local model via Ollama
-  bun run terrarium -- help                        Show this help documentation
+  terrarium                                        Launch interactive OpenTUI terminal shell
+  terrarium run "<prompt>" [options]               Execute one-shot prompt non-interactively
+  terrarium "<prompt>" [options]                   Quick one-shot prompt execution
+  terrarium doctor [options]                       Inspect system health and provider tools
+  terrarium --version                              Show Terrarium version
+  terrarium --help                                 Show this help documentation
 
-Unified Multi-Provider Coding Agent Commands:
-  claude code [options]      Launch Anthropic Claude Code via Terrarium
-                             Options:
-                               --dangerously-skip-permissions  Bypass permission prompts (requires verified isolation)
-                               --yes, -y                       Confirm dangerous mode non-interactively
-                               --workspace <path>              Set workspace directory
-                               --dry-run                       Simulate launch without executing
-                               --help                          Show Claude Code integration help
+Provider Execution Shortcuts:
+  terrarium claude code [options]                  Launch Anthropic Claude Code
+  terrarium agy [options]                          Launch Google Antigravity CLI
+  terrarium agent [options]                        Launch Cursor Agent CLI
+  terrarium --ollama <model>                       Run local model via Ollama
 
-  agy [options]              Launch Google Antigravity CLI via Terrarium
-                             Options:
-                               --dry-run                       Simulate launch without executing
-                               --workspace <path>              Set workspace directory
-                               --executable <path>             Override 'agy' path
-                               --help                          Show Antigravity integration help
+One-Shot Prompt Options:
+  --provider, -p <name>      Target provider: orchestrator (default), claude, agy, agent, ollama
+  --model, -m <model>        Model specification (e.g. llama3.2, qwen2.5:7b)
+  --workspace, -w <path>     Target project workspace directory (auto-detects project root)
+  --dry-run                  Simulate prompt assembly and routing without executing
+  --no-context               Do not automatically attach project tree, manifest, or git status
+  --output, -o <file>        Save output to file
+  --json                     Output JSON execution payload
 
-  agent [options]            Launch Cursor Agent CLI via Terrarium
-                             Options:
-                               --dry-run                       Simulate launch without executing
-                               --workspace <path>              Set workspace directory
-                               --executable <path>             Override 'agent' path
-                               --help                          Show Cursor Agent integration help
-
-  --ollama <model>           Run a local model through Ollama (100% private, zero egress)
-  ollama <model>             Alternative syntax for local Ollama model execution
-                             Options:
-                               --dry-run                       Simulate launch without executing
-                               --help                          Show Ollama integration help
-
-Agent Profile Ecosystem Commands:
+System & Diagnostic Commands:
+  doctor                     Run full diagnostic verification suite
+  coding-agents list         List universal coding agent CLI adapters and host tools
+  coding-agents matrix       Display compatibility matrix and isolation capabilities
   agent list [options]       List agent profiles from the 700+ ecosystem catalog
   agent search <query>       Search agent profiles across roles, capabilities, and domains
   agent inspect <idOrSlug>   Inspect full profile details and capability specifications
   agent departments          List all 10 virtual organization departments
 
-Specialist Provider & Diagnostics:
-  coding-agents list         List universal coding agent CLI adapters and host tools
-  coding-agents matrix       Display compatibility matrix and isolation capabilities
-
-Terminal UI (Default):
-  Running 'bun run terrarium' without arguments launches the full-screen OpenTUI
-  workspace featuring all 10 workspaces, interactive agent explorer, task intake,
-  Engineering Studio, and settings.
+Zero Emoji Policy:
+  Terrarium strictly enforces clean, accessible, zero-emoji typography across all
+  commands, outputs, and terminal views.
 ================================================================================
 `);
 }
@@ -231,7 +219,49 @@ export async function dispatchCliCommand(rawArgs: readonly string[]): Promise<bo
     process.exit(0);
   }
 
+  // 7. Version information ('--version', '-v', 'version')
+  if (primaryCmd === "--version" || primaryCmd === "-v" || primaryCmd === "version") {
+    const config = getDefaultConfig();
+    console.log(`terrarium ${config.version}`);
+    process.exit(0);
+  }
+
+  // 8. Doctor diagnostics ('doctor')
+  if (primaryCmd === "doctor") {
+    const exitCode = await handleDoctorCommand(rawArgs.slice(1));
+    process.exit(exitCode);
+  }
+
+  // 9. Explicit One-shot prompt execution ('run "<prompt>"')
+  if (primaryCmd === "run") {
+    const exitCode = await handleOneshotCommand(rawArgs.slice(1));
+    process.exit(exitCode);
+  }
+
+  // 10. Direct One-shot prompt execution (e.g. 'terrarium "Review this codebase"')
+  // Or flag-prefixed one-shot (e.g. 'terrarium --provider claude "Review this"')
+  const isOneShotFlag =
+    primaryCmd.startsWith("-") &&
+    (primaryCmd === "-p" ||
+      primaryCmd === "--provider" ||
+      primaryCmd === "-w" ||
+      primaryCmd === "--workspace" ||
+      primaryCmd === "-m" ||
+      primaryCmd === "--model" ||
+      primaryCmd === "--dry-run" ||
+      primaryCmd === "--no-context" ||
+      primaryCmd === "-o" ||
+      primaryCmd === "--output" ||
+      primaryCmd === "--json");
+
+  const looksLikePrompt = !primaryCmd.startsWith("-") || isOneShotFlag;
+
+  if (looksLikePrompt) {
+    const exitCode = await handleOneshotCommand(rawArgs);
+    process.exit(exitCode);
+  }
+
   // Unknown command
-  console.error(`[FAIL] Unknown command '${primaryCmd}'. Run 'bun run terrarium -- help' for available commands.`);
+  console.error(`[FAIL] Unknown command '${primaryCmd}'. Run 'terrarium --help' for available commands.`);
   process.exit(1);
 }

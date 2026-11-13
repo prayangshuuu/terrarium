@@ -47,6 +47,11 @@ export function AppShell({
   // Keyboard Navigation Router
   const handleKeyboard = useCallback(
     (event: KeyEvent) => {
+      // If focused on composer, let PromptComposer handle its own keyboard events
+      if (state.focusedRegion === "composer") {
+        return;
+      }
+
       const keyName = event.name.toLowerCase();
 
       // 1. Command Palette handling

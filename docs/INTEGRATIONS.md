@@ -209,3 +209,59 @@ A core reliability requirement of Terrarium is that **disconnected or failing in
 | **OpenAI** | Reasoning models (`o1`, `o1-mini`) do not support custom temperature settings or function tool calling; external network required; API costs apply. |
 | **Gemini** | Different tool calling JSON schema format than OpenAI standard; safety filter sensitivity may block certain security research queries; API costs apply. |
 | **Claude Code CLI** | Requires host Node.js and global binary install; non-interactive mode only; cannot handle interactive terminal prompts; requires human approval for file writes. |
+
+---
+
+## 6. Prompt Workspace, Global Installation, and System Diagnostics (Prompt 26)
+
+### Global Binary Installation
+TERRARIUM includes a standalone executable entrypoint at `bin/terrarium`. It can be invoked directly from anywhere on the host machine:
+
+```bash
+# Automated global symlink into ~/.local/bin/terrarium:
+./scripts/install-global.sh
+# or from root workspace:
+bun run link:global
+```
+
+When invoked from any directory (e.g. `/tmp/test-project`), `terrarium` automatically:
+1. Resolves its own canonical repo directory through symlinks (`realpathSync`).
+2. Climbs the directory hierarchy from `process.cwd()` to identify the target project root boundary via `.git`, `package.json`, `Cargo.toml`, `pyproject.toml`, etc.
+3. Automatically attaches repository manifests, tree structures, and git context unless `--no-context` is passed.
+
+### System Diagnostics (`terrarium doctor`)
+The `terrarium doctor` command runs an exhaustive system check across:
+- **Runtime**: Bun engine version, OS platform, and architecture.
+- **Project Discovery**: Active project root and git repository detection.
+- **Database & Cache**: SQLite database read/write access and path verification.
+- **Provider Adapters**: Probes `claude`, `agy`, `agent`, and `ollama` executables, extracting live versions.
+- **PATH Analysis**: Checks whether `~/.local/bin` is in PATH and offers shell configuration guidance.
+
+Output options:
+- Human-readable zero-emoji table: `terrarium doctor`
+- Machine-readable JSON: `terrarium doctor --json`
+
+### One-Shot Prompt Execution
+Prompts can be authored and submitted directly from the shell:
+```bash
+# Direct prompt execution
+terrarium "Review this codebase and identify architectural risks"
+
+# Provider-specific execution
+terrarium run "..." --provider claude
+terrarium run "..." --provider agy
+terrarium run "..." --provider agent
+terrarium run "..." --provider ollama -m llama3.2
+
+# Dry-run execution
+terrarium run "..." --dry-run
+
+# Stdin piping
+echo "Explain the task intake pipeline" | terrarium
+```
+
+### Prompt Security & Privacy
+- **Secret Redaction**: Every prompt saved to history is pre-processed with `redactSecrets()`, automatically masking Anthropic keys (`sk-ant-*`), OpenAI keys (`sk-*`), Google AI keys (`AIza*`), GitHub tokens (`ghp_*`), Slack tokens, Bearer tokens, and inline passwords.
+- **Bounded Storage**: Prompt history is persisted in `~/.terrarium/prompt-history.json` and bounded by strict FIFO eviction (default 100 items).
+- **Starter Templates**: 11 production-grade starter templates accessible via `/templates` or F2 in the TUI, covering architecture reviews, bug investigations, feature plans, test suites, and refactoring.
+

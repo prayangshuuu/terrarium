@@ -91,7 +91,7 @@ export {
 
 export type ReportsActiveTab = "overview" | "evidence" | "disagreements" | "recommendations" | "preview";
 
-export type FocusedRegion = "nav" | "content" | "palette" | "help";
+export type FocusedRegion = "nav" | "content" | "palette" | "help" | "composer";
 
 export type ViewMode = "ready" | "loading" | "empty" | "error" | "disconnected";
 

@@ -24,11 +24,11 @@ import {
 import { THEME_COLORS } from "../tokens/colors.js";
 import { GLYPHS } from "../tokens/glyphs.js";
 import { useTerrariumUi } from "../state/ui-context.js";
+import { PromptComposer } from "../components/PromptComposer.js";
 
 export function ConversationsView() {
   const { state, controller } = useTerrariumUi();
   const [isTyping, setIsTyping] = useState(false);
-  const [draft, setDraft] = useState("");
 
   const sessions = state.sessions;
   const selectedSession: Session | null = sessions[state.selectedSessionIndex] ?? null;
@@ -39,36 +39,12 @@ export function ConversationsView() {
       // Overlays take precedence
       if (state.isCommandPaletteOpen || state.isHelpModalOpen) return;
 
-      const keyName = event.name.toLowerCase();
-
-      // If typing in the chat draft input
+      // If PromptComposer is active, it handles its own keyboard events
       if (isTyping) {
-        if (keyName === "escape" || keyName === "esc" || event.sequence === "\u001b") {
-          setIsTyping(false);
-          return;
-        }
-
-        if (keyName === "return" || keyName === "enter") {
-          if (draft.trim().length > 0) {
-            void controller.sendMessage(draft.trim());
-            setDraft("");
-            setIsTyping(false);
-          }
-          return;
-        }
-
-        if (keyName === "backspace") {
-          setDraft((prev) => prev.slice(0, -1));
-          return;
-        }
-
-        if (event.sequence && event.sequence.length === 1 && !event.ctrl && !event.meta) {
-          setDraft((prev) => prev + event.sequence);
-          return;
-        }
-
         return;
       }
+
+      const keyName = event.name.toLowerCase();
 
       // Normal Navigation / Command Mode
 
@@ -92,6 +68,7 @@ export function ConversationsView() {
         (!event.ctrl && !event.meta && keyName === "i")
       ) {
         setIsTyping(true);
+        controller.setFocusedRegion("composer");
         return;
       }
 
@@ -102,7 +79,7 @@ export function ConversationsView() {
         return;
       }
     },
-    [state, controller, isTyping, draft, sessions]
+    [state, controller, isTyping, sessions]
   );
 
   useKeyboard(handleKeyboard);
@@ -393,28 +370,41 @@ export function ConversationsView() {
               )}
             </box>
 
-            {/* Bottom Chat Prompt Input */}
-            <box
-              flexDirection="row"
-              alignItems="center"
-              border={true}
-              borderStyle="single"
-              borderColor={isTyping ? THEME_COLORS.borderFocused : THEME_COLORS.borderDefault}
-              backgroundColor={THEME_COLORS.bgInput}
-              paddingX={1}
-            >
-              <text fg={isTyping ? THEME_COLORS.statusInfo : THEME_COLORS.fgMuted} attributes={TextAttributes.BOLD}>
-                {isTyping ? "Input: " : "[i/Enter to chat]: "}
-              </text>
-              <text fg={draft ? THEME_COLORS.fgPrimary : THEME_COLORS.fgDim}>
-                {draft || (isTyping ? "" : "Ask agents, debate trade-offs, or evaluate simulated customer feedback...")}
-              </text>
-              {isTyping && (
-                <text fg={THEME_COLORS.statusInfo} attributes={TextAttributes.BOLD}>
-                  ▎
+            {/* Bottom Prompt Composer */}
+            {isTyping ? (
+              <PromptComposer
+                isFocused={true}
+                height={7}
+                onSubmit={(data) => {
+                  void controller.sendMessage(data.prompt);
+                  setIsTyping(false);
+                  controller.setFocusedRegion("content");
+                }}
+                onCancel={() => {
+                  setIsTyping(false);
+                  controller.setFocusedRegion("content");
+                }}
+              />
+            ) : (
+              <box
+                flexDirection="row"
+                justifyContent="space-between"
+                alignItems="center"
+                border={true}
+                borderStyle="single"
+                borderColor={THEME_COLORS.borderDefault}
+                backgroundColor={THEME_COLORS.bgInput}
+                paddingX={2}
+                paddingY={0}
+              >
+                <text fg={THEME_COLORS.fgSecondary} attributes={TextAttributes.BOLD}>
+                  [i / Enter] Open Prompt Composer • [/] Slash Commands • [F2] Templates • [F3] History
                 </text>
-              )}
-            </box>
+                <text fg={THEME_COLORS.fgDim} attributes={TextAttributes.DIM}>
+                  Target: Claude / Antigravity / Cursor / Ollama
+                </text>
+              </box>
+            )}
           </box>
         </box>
       )}

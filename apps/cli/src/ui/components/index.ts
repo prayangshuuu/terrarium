@@ -12,4 +12,5 @@ export * from "./CommandPalette.js";
 export * from "./HelpModal.js";
 export * from "./ViewStates.js";
 export * from "./ResponsiveContainer.js";
+export * from "./PromptComposer.js";
 export * from "./ActivityFeed.js";

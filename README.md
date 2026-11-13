@@ -46,14 +46,28 @@ Unlike daemon-heavy agent frameworks that keep dozens of background processes ru
    bun test
    ```
 
-4. **Launch Interactive OpenTUI Terminal Shell**:
+4. **Install Globally (Direct `terrarium` command)**:
    ```bash
-   bun run cli
+   ./scripts/install-global.sh
+   # or: bun run link:global
+   ```
+   *Establishes a symlink in `~/.local/bin/terrarium`. You can now run `terrarium` from any working directory!*
+
+5. **Run System Health Diagnostics**:
+   ```bash
+   terrarium doctor
    ```
 
-5. **Execute a Non-Interactive Workflow (CI / Scripting Mode)**:
+6. **Launch Interactive OpenTUI Terminal Shell**:
    ```bash
-   bun run --cwd apps/cli start -- workflow run "Conduct architectural inspection of packages/core"
+   terrarium
+   # or from repo: bun run cli
+   ```
+
+7. **Execute One-Shot Prompts (Scripting & Pipe Mode)**:
+   ```bash
+   terrarium "Review this codebase and identify architectural risks"
+   echo "Explain this service" | terrarium
    ```
 
 ---
@@ -110,6 +124,7 @@ In compliance with project auditing standards, every subsystem in TERRARIUM is l
 | **Unified Multi-Provider Coding Agent CLI** | `[IMPLEMENTED]` | Unified commands for Claude Code, Antigravity (`agy`), Cursor Agent (`agent`), and Ollama. |
 | **First-Class Claude Code Integration** | `[IMPLEMENTED]` | Exact CLI invocation (`bun run terrarium -- claude code`), explicit dangerous-permissions mode, and fail-closed isolation gate. |
 | **700+ Agent Profile Ecosystem** | `[IMPLEMENTED]` | 750+ schema-valid profiles across 50 canonical domains, zero duplicates, rich metadata, 100% zero emojis. |
+| **First-Class Prompt Workspace & Global CLI** | `[IMPLEMENTED]` | Standalone `terrarium` binary in PATH, multiline prompt composer, history/drafts, 11 templates, and `doctor` command. |
 | **Experimental Coding Agent Bridges** | `[EXPERIMENTAL]` | Native Linux namespace/bwrap containers and secondary coding agent bridges. |
 | **Multi-Node Distributed Clustering** | `[PLANNED]` | Local single-node multi-process supported; distributed cluster planned for v2. |
 | **Web Studio GUI** | `[PLANNED]` | Terminal TUI implemented; future web UI will consume identical `@terrarium/core` state. |
@@ -118,17 +133,30 @@ In compliance with project auditing standards, every subsystem in TERRARIUM is l
 
 ## 5. CLI Command Reference
 
-TERRARIUM provides full-screen TUI views, scriptable command-line utilities, and first-class coding-agent process execution:
+TERRARIUM provides full-screen TUI views, scriptable command-line utilities, one-shot prompt authoring, and first-class coding-agent process execution:
 
 ```bash
+# Standalone CLI & Diagnostics (Prompt 26)
+terrarium                                            # Launch interactive OpenTUI workspace
+terrarium doctor [--json]                            # Run comprehensive system diagnostics
+terrarium --version                                  # Show Terrarium version
+terrarium --help                                     # Show universal help documentation
+
+# One-Shot Prompt Execution (Scripting & Piping)
+terrarium "Review this codebase and identify risks"  # Direct one-shot prompt
+terrarium run "..." --provider claude                # Route one-shot prompt to Claude Code
+terrarium run "..." --provider agy                   # Route one-shot prompt to Antigravity
+terrarium run "..." --provider agent                 # Route one-shot prompt to Cursor Agent
+terrarium run "..." --provider ollama -m llama3.2    # Route one-shot prompt to Ollama
+echo "Explain the architecture" | terrarium          # Piped prompt input
+
 # Unified Multi-Provider Coding Agent Execution (Prompt 24 & Prompt 25)
-bun run terrarium -- claude code                     # Claude Code in standard mode (prompts preserved)
-bun run terrarium -- claude code --dangerously-skip-permissions --yes  # Dangerous mode with verified isolation
-bun run terrarium -- agy [options]                   # Google Antigravity CLI launcher
-bun run terrarium -- agent [options]                 # Cursor Agent CLI launcher
-bun run terrarium --ollama <model>                   # Local offline model execution via Ollama
-bun run terrarium -- ollama <model>                  # Alternative syntax for Ollama runner
-bun run terrarium -- help                            # Terrarium unified CLI launcher help
+terrarium claude code                                # Claude Code in standard mode (prompts preserved)
+terrarium claude code --dangerously-skip-permissions --yes  # Dangerous mode with verified isolation
+terrarium agy [options]                              # Google Antigravity CLI launcher
+terrarium agent [options]                            # Cursor Agent CLI launcher
+terrarium --ollama <model>                           # Local offline model execution via Ollama
+terrarium ollama <model>                             # Alternative syntax for Ollama runner
 
 # Workflow Execution
 terrarium workflow run <prompt> [--auto-approve] [--budget <usd>] [--json]
