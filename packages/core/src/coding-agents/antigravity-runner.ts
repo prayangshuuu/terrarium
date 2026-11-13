@@ -62,6 +62,11 @@ export class AntigravityRunner {
           searchLocations,
         };
       }
+      return {
+        found: false,
+        error: `Custom Antigravity executable path '${customPath}' does not exist or is not executable.`,
+        searchLocations,
+      };
     }
 
     // 2. Environment variable overrides

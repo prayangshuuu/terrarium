@@ -311,6 +311,30 @@ export function SettingsView() {
               notes: "Supported; verified host tool v2.1.319",
             },
             {
+              name: "Antigravity CLI",
+              binary: "agy",
+              statusText: "[INSTALLED]",
+              statusColor: THEME_COLORS.statusSuccess,
+              mode: "print (-p) / auto",
+              notes: "Supported; verified host tool v1.5.7",
+            },
+            {
+              name: "Cursor Agent CLI",
+              binary: "agent",
+              statusText: "[INSTALLED]",
+              statusColor: THEME_COLORS.statusSuccess,
+              mode: "print (-p) / plan",
+              notes: "Supported; verified host tool v2026.09.18",
+            },
+            {
+              name: "Ollama Local Runtime",
+              binary: "ollama",
+              statusText: "[INSTALLED]",
+              statusColor: THEME_COLORS.statusSuccess,
+              mode: "local_run / loopback",
+              notes: "Supported; verified host tool v0.32.0",
+            },
+            {
               name: "OpenAI Codex CLI",
               binary: "codex",
               statusText: "[INSTALLED]",
@@ -333,22 +357,6 @@ export function SettingsView() {
               statusColor: THEME_COLORS.statusSuccess,
               mode: "print (-p)",
               notes: "Supported; verified host tool v0.53.1",
-            },
-            {
-              name: "Cursor IDE Bridge",
-              binary: "cursor",
-              statusText: "[NO DAEMON]",
-              statusColor: THEME_COLORS.statusWarning,
-              mode: "editor_bridge",
-              notes: "Partially supported; requires active IDE GUI window",
-            },
-            {
-              name: "Aider CLI",
-              binary: "aider",
-              statusText: "[NOT FOUND]",
-              statusColor: THEME_COLORS.fgDim,
-              mode: "git_paired",
-              notes: "Unavailable; install with 'pip install aider-chat'",
             },
           ].map((item) => (
             <box key={item.binary} flexDirection="row" alignItems="center" paddingY={0}>
@@ -384,19 +392,22 @@ export function SettingsView() {
             flexDirection="column"
           >
             <text fg={THEME_COLORS.statusInfo} attributes={TextAttributes.BOLD}>
-              FIRST-CLASS CLAUDE CODE LAUNCH (PROMPT 24):
+              UNIFIED MULTI-PROVIDER COMMAND SUITE (PROMPT 25):
             </text>
             <text fg={THEME_COLORS.fgPrimary}>
-              • Invocation: bun run terrarium -- claude code [options] [-- passthrough-args]
+              • Claude Code:   bun run terrarium -- claude code [options]
             </text>
-            <text fg={THEME_COLORS.fgSecondary}>
-              • Default Policy: standard (Claude prompts on filesystem/network/process actions)
+            <text fg={THEME_COLORS.fgPrimary}>
+              • Antigravity:   bun run terrarium -- agy [options]
             </text>
-            <text fg={THEME_COLORS.fgSecondary}>
-              • Dangerous Mode: isolated_bypass (--dangerously-skip-permissions)
+            <text fg={THEME_COLORS.fgPrimary}>
+              • Cursor Agent:  bun run terrarium -- agent [options]
             </text>
-            <text fg={THEME_COLORS.fgMuted}>
-              • Isolation Requirements: verified isolated workspace boundary, root/home/system paths rejected, environment variable scrubbing
+            <text fg={THEME_COLORS.fgPrimary}>
+              • Ollama Local:  bun run terrarium --ollama {"<model>"} [prompt...]
+            </text>
+            <text fg={THEME_COLORS.fgSecondary} marginTop={1}>
+              Safety Policy: Strict argument vectors (zero shell interpolation), ambient secret scrubbing, and verified isolation.
             </text>
           </box>
 

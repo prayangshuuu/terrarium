@@ -69,6 +69,11 @@ export class ClaudeCodeRunner {
           searchLocations,
         };
       }
+      return {
+        found: false,
+        error: `Custom Claude Code executable path '${customPath}' does not exist or is not executable.`,
+        searchLocations,
+      };
     }
 
     // 2. Environment variable overrides

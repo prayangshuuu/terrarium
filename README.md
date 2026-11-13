@@ -106,6 +106,8 @@ In compliance with project auditing standards, every subsystem in TERRARIUM is l
 | **Report Generation & Provenance** | `[IMPLEMENTED]` | Evidence classification, disagreement preservation, and Markdown export. |
 | **Synthetic Customer Simulation** | `[IMPLEMENTED]` | Persona-based feedback exploration with mandatory simulation disclaimers. |
 | **Specialist Provider Adapters** | `[IMPLEMENTED]` | Anthropic (Tier 1), Ollama (Offline Tier 1), OpenAI (Tier 1), Gemini (Tier 2). |
+| **Precision Terminal Design System & Geometry** | `[IMPLEMENTED]` | Responsive box engine (compact, standard, wide, ultra-wide) with zero overflow. |
+| **Unified Multi-Provider Coding Agent CLI** | `[IMPLEMENTED]` | Unified commands for Claude Code, Antigravity (`agy`), Cursor Agent (`agent`), and Ollama. |
 | **First-Class Claude Code Integration** | `[IMPLEMENTED]` | Exact CLI invocation (`bun run terrarium -- claude code`), explicit dangerous-permissions mode, and fail-closed isolation gate. |
 | **700+ Agent Profile Ecosystem** | `[IMPLEMENTED]` | 750+ schema-valid profiles across 50 canonical domains, zero duplicates, rich metadata, 100% zero emojis. |
 | **Experimental Coding Agent Bridges** | `[EXPERIMENTAL]` | Native Linux namespace/bwrap containers and secondary coding agent bridges. |
@@ -119,12 +121,14 @@ In compliance with project auditing standards, every subsystem in TERRARIUM is l
 TERRARIUM provides full-screen TUI views, scriptable command-line utilities, and first-class coding-agent process execution:
 
 ```bash
-# First-Class Claude Code Launch (Prompt 24)
-bun run terrarium -- claude code                     # Standard permission mode (interactive prompts preserved)
-bun run terrarium -- claude code --help              # Passthrough help from Claude Code CLI
-bun run terrarium -- claude code --dry-run           # Inspect executable path, argv, and isolation verification
-bun run terrarium -- claude code --dangerously-skip-permissions --yes  # Explicit dangerous mode (requires verified sandbox)
-bun run terrarium -- claude --help                   # Terrarium Claude Code launcher options and safety policies
+# Unified Multi-Provider Coding Agent Execution (Prompt 24 & Prompt 25)
+bun run terrarium -- claude code                     # Claude Code in standard mode (prompts preserved)
+bun run terrarium -- claude code --dangerously-skip-permissions --yes  # Dangerous mode with verified isolation
+bun run terrarium -- agy [options]                   # Google Antigravity CLI launcher
+bun run terrarium -- agent [options]                 # Cursor Agent CLI launcher
+bun run terrarium --ollama <model>                   # Local offline model execution via Ollama
+bun run terrarium -- ollama <model>                  # Alternative syntax for Ollama runner
+bun run terrarium -- help                            # Terrarium unified CLI launcher help
 
 # Workflow Execution
 terrarium workflow run <prompt> [--auto-approve] [--budget <usd>] [--json]

@@ -69,6 +69,11 @@ export class OllamaRunner {
           searchLocations,
         };
       }
+      return {
+        found: false,
+        error: `Custom Ollama executable path '${customPath}' does not exist or is not executable.`,
+        searchLocations,
+      };
     }
 
     // 2. Environment variables

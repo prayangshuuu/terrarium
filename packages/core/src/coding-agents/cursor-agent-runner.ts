@@ -62,6 +62,11 @@ export class CursorAgentRunner {
           searchLocations,
         };
       }
+      return {
+        found: false,
+        error: `Custom Cursor Agent executable path '${customPath}' does not exist or is not executable.`,
+        searchLocations,
+      };
     }
 
     // 2. Environment variable overrides

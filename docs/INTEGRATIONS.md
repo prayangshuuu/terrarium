@@ -104,6 +104,61 @@ In accordance with Prompt 19 ("Rank integrations by user value, risk, maintenanc
   - `--dry-run`: Performs discovery, version probing, environment sanitization, and isolation verification without spawning the process.
   - `--help`, `-h`: Shows Claude Code help (forwarded to Claude Code if sole argument).
   - `bun run terrarium -- claude --help`: Displays Terrarium's Claude launcher help and security policies.
+
+### 5. Antigravity CLI Integration (Rank 6 — Official Google Antigravity Agent)
+- **Primary Value**: Provides direct access to Google Antigravity autonomous coding agent CLI and ACP stdio server.
+- **Exact Invocation**:
+  ```bash
+  bun run terrarium -- agy [options] [passthrough-args...]
+  ```
+- **Supported Options**:
+  - `--dry-run`: Prints prepared argument vector without executing.
+  - `--workspace <path>`: Sets target project working directory.
+  - `--executable <path>`: Overrides path to 'agy' binary.
+  - `--help`: Shows Antigravity integration help.
+  - All remaining options (e.g., `-p`, `--print`, `--mode`, `--model`, `--effort`) are forwarded directly.
+- **Discovery Strategy**:
+  - Checks `--executable <path>` flag or `AGY_EXECUTABLE_PATH`.
+  - Searches system `PATH` via `which agy` / `which antigravity`.
+  - Probes standard locations: `~/.local/bin/agy`, `/opt/homebrew/bin/agy`.
+  - Probes version via `agy --version` (verified on host: `v1.5.7`).
+
+### 6. Cursor Agent CLI Integration (Rank 7 — Standalone Cursor Terminal Agent)
+- **Primary Value**: Integrates Cursor's standalone headless and interactive agent runner into Terrarium.
+- **Exact Invocation**:
+  ```bash
+  bun run terrarium -- agent [options] [passthrough-args...]
+  ```
+- **Supported Options**:
+  - `--dry-run`: Prints prepared argument vector without executing.
+  - `--workspace <path>`: Sets target workspace directory.
+  - `--executable <path>`: Overrides path to 'agent' binary.
+  - `--help`: Shows Cursor Agent integration help.
+  - Passthrough options: `--plan`, `-p`, `--model`, `--continue`, etc.
+- **Discovery Strategy**:
+  - Checks `--executable <path>` flag or `CURSOR_AGENT_EXECUTABLE`.
+  - Searches system `PATH` via `which agent` / `which cursor`.
+  - Probes standard locations: `~/.local/bin/agent`, `~/.cursor/bin/agent`.
+  - Probes version via `agent --version` (verified on host: `v2026.09.18-9a7762b`).
+
+### 7. Ollama Local Model Execution (Rank 2 — 100% Private Offline Inference)
+- **Primary Value**: Directly runs local LLMs through Terrarium without cloud token costs or data transmission.
+- **Exact Invocation**:
+  ```bash
+  bun run terrarium --ollama <model> [options] [prompt...]
+  # or:
+  bun run terrarium -- ollama <model> [options] [prompt...]
+  ```
+- **Bun Argument Handling Verification**:
+  - Tested from root workspace: When invoked as `bun run terrarium --ollama <model>`, Bun passes `--ollama` directly into `process.argv` of the script without intercepting or failing. Both `--ollama` and `ollama` syntax are fully supported.
+- **Supported Options**:
+  - `--dry-run`: Prints prepared launch vector (`["ollama", "run", "<model>"]`) without spawning.
+  - `--executable <path>`: Overrides path to `ollama` executable.
+  - `--help`: Shows Ollama integration help.
+- **Safety & Privacy Preconditions**:
+  - **No Unapproved Downloads**: Terrarium verifies whether the requested model is installed. If absent, it halts with clear download instructions (`ollama pull <model>`) rather than auto-pulling gigabytes of model weights.
+  - **Offline Resilience**: Checks daemon connectivity and reports actionable setup guidance (`ollama serve`) if the daemon is stopped.
+  - **Zero Cloud Transmission**: All prompts stay on `http://localhost:11434`.
 - **Discovery Strategy**:
   1. Checks user-specified `--executable <path>` or `CLAUDE_CODE_EXECUTABLE` environment variable.
   2. Resolves binary via system `PATH` using `which claude` (macOS/Linux) or `where.exe claude` (Windows).
